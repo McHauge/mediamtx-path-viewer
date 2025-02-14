@@ -26,6 +26,7 @@ type Path struct {
 	Readers   []Session `json:"readers"`
 
 	// Added internaly
+	ID           string `json:"id,omitempty"`
 	ReadyTimeStr string `json:"readyTimeStr,omitempty"`
 	TotalReaders int    `json:"totalReaders,omitempty"`
 	StreamUrl    string `json:"streamUrl,omitempty"`

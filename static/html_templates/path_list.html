@@ -20,7 +20,9 @@
                             <p class="card-text fs-6 mb-0">Source: {{.Source.Type}}</p>
                             {{end}}
                             <p class="card-text fs-6 mb-0">Start Time: {{.ReadyTimeStr}}</p>
-                            <p class="card-text fs-6 mb-0">Viewers: {{.TotalReaders}}</p>
+                            <div hx-get="{{$.BaseURL}}/viewCount/{{.ID}}" hx-trigger="every 5s" hx-target="#viewCount_{{.ID}}">
+                                <p class="card-text fs-6 mb-0" id="viewCount_{{.ID}}">Viewers: {{.TotalReaders}}</p>
+                            </div>
                             <p class="card-text fs-6 mb-0">Tracks:</p>
                             {{range .Tracks}}
                             <p class="card-text fs-6 mb-0">  {{.}}</p>

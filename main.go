@@ -112,9 +112,44 @@ func setupRoutes(router *http.ServeMux, client *http.Client) {
 		log.Should(err)
 	})
 
+	// Update the view count for a path
+	router.HandleFunc(basePath+"/viewCount/{id}", func(w http.ResponseWriter, r *http.Request) {
+		log.Warnln("HTMX recived: viewCount", r.PathValue("id"), r.Header.Get("HX-Request"))
+
+		ID := r.PathValue("id")
+		ID = strings.ReplaceAll(ID, "-", "/")
+
+		// Get the paths from the MediaMTX server
+		MediaMTX_Data, err := getMediamtxPath(client, ID) // Get the first 100 paths
+		if err != nil {
+			log.Errorf("Error getting paths from MediaMTX: %s", err)
+			http.Error(w, "Error getting paths from MediaMTX", http.StatusInternalServerError)
+			return
+		}
+
+		// log.Warn(log.Indent(MediaMTX_Data))
+		type viewers struct {
+			BaseURL      string
+			Error        string
+			PageTitle    string
+			TotalReaders int
+		}
+		viewCounter := viewers{
+			BaseURL:     basePath,
+			PageTitle:   "View Counter",
+			TotalReaders: MediaMTX_Data.TotalReaders,
+		}
+
+		// Load the server paths template
+
+		temp := template.Must(template.New("viewCounter/" + MediaMTX_Data.ID).Parse("Viewers: {{.TotalReaders}}"))
+		err = temp.Execute(w, viewCounter)
+		log.Should(err)
+	})
+
 	// Handle Connect to device request
 	router.HandleFunc(basePath+"/connect-to-server/", func(w http.ResponseWriter, r *http.Request) {
-		log.Warn("HTMX recived: connect-to-server ", r.Header.Get("HX-Request"))
+		log.Warnln("HTMX recived: connect-to-server", r.Header.Get("HX-Request"))
 
 		// Redirect if not an htmx request
 		if r.Header.Get("HX-Request") != "true" {
@@ -123,7 +158,7 @@ func setupRoutes(router *http.ServeMux, client *http.Client) {
 		}
 
 		// Get the paths from the MediaMTX server
-		MediaMTX_Data, err := getMediamtxData(client, 0, 100) // Get the first 100 paths
+		MediaMTX_Data, err := getMediamtxPaths(client, 0, 100) // Get the first 100 paths
 		if err != nil {
 			log.Errorf("Error getting paths from MediaMTX: %s", err)
 			http.Error(w, "Error getting paths from MediaMTX", http.StatusInternalServerError)
