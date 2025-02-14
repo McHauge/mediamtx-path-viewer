@@ -30,7 +30,6 @@
                 </div>
                 <div class="card-footer mb-0">
                     <!-- <div class="d-flex flex-row flex-wrap"> -->
-                    {{if (eq .Ready true)}}
                     <div class="d-grid gap-2 d-md-block">
                         {{if (ne .StreamWebRTC "")}}
                         <a class="btn btn-secondary btn-sm px-2" href="{{.StreamWebRTC}}/?muted=false&autoplay=true">WebRTC Stream Link</a>
@@ -45,7 +44,6 @@
                         <a class="btn btn-secondary btn-sm px-2" href="{{.StreamRtsp}}">RTSP Stream Link</a>
                         {{end}}
                     </div>
-                    {{end}}
                 </div>
             </div>
             {{end}}
