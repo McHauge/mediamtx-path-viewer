@@ -128,11 +128,11 @@ func setupRoutes(router *http.ServeMux, client *http.Client) {
 		}
 
 		htmlData := HTMLdata{
-			BaseURL:   basePath,
-			PageTitle: "Server Paths",
-			ItemCount: MediaMTX_Data.ItemCount,
-			PageCount: MediaMTX_Data.PageCount,
-			Items:     MediaMTX_Data.Items,
+			BaseURL:    basePath,
+			PageTitle:  "Server Paths",
+			ItemCount:  MediaMTX_Data.ItemCount,
+			PageCount:  MediaMTX_Data.PageCount,
+			Items:      MediaMTX_Data.Items,
 		}
 		// log.Warn(log.Indent(MediaMTX_Data))
 
