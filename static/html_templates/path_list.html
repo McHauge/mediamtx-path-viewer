@@ -11,7 +11,7 @@
                     <div class="d-flex flex-row flex-wrap">
                         {{if (eq .Ready true)}}
                         <div class="p-2" style="width: min(640px, 100%)">
-                           <iframe style="width: 100%; height: auto; aspect-ratio: 16/9;" src="{{.StreamUrl}}/?muted=false" scrolling="no" frameborder="0" allowfullscreen></iframe>
+                           <iframe style="width: 100%; height: auto; aspect-ratio: 16/9;" src="{{.StreamUrl}}" scrolling="no" frameborder="0" allowfullscreen></iframe>
                         </div>
                         {{end}}
                         <div class="p-2">
