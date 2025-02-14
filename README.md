@@ -21,4 +21,4 @@ MEDIAMTX_PASSWORD=
 
 # App Settings
 APP_PORT=8080
-APP_PATH=/monitor
+APP_PATH=

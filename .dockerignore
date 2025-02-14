@@ -1,0 +1,12 @@
+# do not add .git, since it is needed to extract the tag
+# do not add /tmp, since it is needed by make dockerhub
+/.github
+/Icon_Tools
+/bin
+/node_modules
+/package-lock.json
+/package.json
+config.json
+*.txt
+yarn.lock
+.env

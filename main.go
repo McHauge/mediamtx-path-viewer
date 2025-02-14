@@ -172,7 +172,7 @@ func getEnv() {
 	// we keep it empty it will load .env from current directory
 	err := godotenv.Load(".env")
 	if err != nil {
-		log.Fatalf("Error loading .env file, %s", err)
+		log.Warnf("Error loading .env file, %s, ignore this if ran in docker", err)
 	}
 
 	MEDIAMTX_WEBRTC_URL = os.Getenv("MEDIAMTX_WEBRTC_URL")
