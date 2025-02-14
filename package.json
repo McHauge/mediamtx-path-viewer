@@ -1,0 +1,21 @@
+{
+    "name": "mediamtx-path-viewer",
+    "version": "0.1.0",
+    "license": "MIT",
+    "private": true,
+    "scripts": {
+        "wgo": "go generate && cross-env CLICOLOR_FORCE=1 LOG=ln wgo",
+        "air": "go generate && cross-env CLICOLOR_FORCE=1 LOG=ln air",
+        "test": "go generate && cross-env CLICOLOR_FORCE=1 LOG=ln go run .",
+        "tidy": "go mod tidy",
+        "generate": "go generate",
+        "build_docker": "go generate && docker build -t mchauge/mediamtx-path-viewer:stable .",
+        "build_docker_beta": "go generate && docker build -t mchauge/mediamtx-path-viewer:beta .",
+        "docker_push": "yarn build_docker && docker push mchauge/mediamtx-path-viewer:stable",
+        "docker_push_beta": "yarn build_docker_beta && docker push mchauge/mediamtx-path-viewer:beta"
+    },
+    "devDependencies": {
+        "nodemon": "^2.0.7",
+        "cross-env": "^7.0.3"
+    }
+}

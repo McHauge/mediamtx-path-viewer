@@ -29,7 +29,12 @@
                     </div> 
                 </div>
                 <div class="card-footer mb-0">
-                    <!-- <div class="d-flex flex-row flex-wrap"> -->
+                    <script>
+                        function sendToClipBoard(text) {
+                            navigator.clipboard.writeText(text);
+                            // alert("Copied link to clipboard: " + text);
+                        }
+                    </script>
                     <div class="d-grid gap-2 d-md-block">
                         {{if (ne .StreamWebRTC "")}}
                         <a class="btn btn-secondary btn-sm px-2" href="{{.StreamWebRTC}}/?muted=false&autoplay=true">WebRTC Stream Link</a>
@@ -38,10 +43,10 @@
                         <a class="btn btn-secondary btn-sm px-2" href="{{.StreamHls}}/?muted=false&autoplay=true">HLS Stream Link</a>
                         {{end}}
                         {{if (ne .StreamRtmp "")}}
-                        <a class="btn btn-secondary btn-sm px-2" href="{{.StreamRtmp}}">RTMP Stream Link</a>
+                        <a class="btn btn-secondary btn-sm px-2" onpointerdown="sendToClipBoard('{{.StreamRtmp}}')" onpointerup="alert('Copied link to clipboard: {{.StreamRtmp}}')">RTMP Stream Link</a>
                         {{end}}
                         {{if (ne .StreamRtsp "")}}
-                        <a class="btn btn-secondary btn-sm px-2" href="{{.StreamRtsp}}">RTSP Stream Link</a>
+                        <a class="btn btn-secondary btn-sm px-2" onpointerdown="sendToClipBoard('{{.StreamRtsp}}')" onpointerup="alert('Copied link to clipboard: {{.StreamRtsp}}')">RTSP Stream Link</a>
                         {{end}}
                     </div>
                 </div>
