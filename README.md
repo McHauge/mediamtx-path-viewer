@@ -27,8 +27,8 @@ MEDIAMTX_PASSWORD=
 ## MediaMTX Base Stream Links Pr. Protocol
 MEDIAMTX_WEBRTC_URL=https://wbrtc.example.com  
 MEDIAMTX_HLS_URL=https://cdn.example.com  
-MEDIAMTX_RTMP_URL=rtmp://cdn.example.com 
-MEDIAMTX_RTSP_URL=rtspt://cdn.example.com 
+MEDIAMTX_RTMP_URL=rtmp://cdn.example.com  
+MEDIAMTX_RTSP_URL=rtspt://cdn.example.com  
 
 ## App Settings
 APP_PORT=8080  
