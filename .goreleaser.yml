@@ -19,17 +19,15 @@ builds:
       - windows
     goarch:
       - amd64
-      - arm
-      - arm64
+      # - arm
+      # - arm64
     goarm:
       - "7"
       - "6"
     ignore:
       # Ignore arm for windows
       - goos: windows
-        goarch: 
-        - arm
-        - arm64
+        goarch: arm
       # Ignore arm v4 for macos
       - goos: darwin
         goarch: arm
