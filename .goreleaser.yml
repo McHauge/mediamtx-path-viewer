@@ -14,7 +14,7 @@ builds:
       - CGO_ENABLED=0
     # ldflags: -s -w
     goos:
-      # - linux
+      - linux
       # - darwin
       - windows
     goarch:
@@ -27,6 +27,8 @@ builds:
     ignore:
       # Ignore arm for windows
       - goos: windows
+        goarch: arm
+      - goos: linux
         goarch: arm
       # Ignore arm v4 for macos
       - goos: darwin
