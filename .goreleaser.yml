@@ -27,7 +27,9 @@ builds:
     ignore:
       # Ignore arm for windows
       - goos: windows
-        goarch: arm
+        goarch: 
+        - arm
+        - arm64
       # Ignore arm v4 for macos
       - goos: darwin
         goarch: arm
