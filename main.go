@@ -33,12 +33,15 @@ var (
 
 var (
 	// Environment Variables
+	MEDIAMTX_API_URL  string
+	MEDIAMTX_API_PORT string
+	MEDIAMTX_USERNAME string
+	MEDIAMTX_PASSWORD string
+
 	MEDIAMTX_WEBRTC_URL string
 	MEDIAMTX_HLS_URL    string
-	MEDIAMTX_API_URL    string
-	MEDIAMTX_API_PORT   string
-	MEDIAMTX_USERNAME   string
-	MEDIAMTX_PASSWORD   string
+	MEDIAMTX_RTMP_URL   string
+	MEDIAMTX_RTSP_URL   string
 
 	// Default values
 	basePath = ""     // Default to /monitor
@@ -128,11 +131,11 @@ func setupRoutes(router *http.ServeMux, client *http.Client) {
 		}
 
 		htmlData := HTMLdata{
-			BaseURL:    basePath,
-			PageTitle:  "Server Paths",
-			ItemCount:  MediaMTX_Data.ItemCount,
-			PageCount:  MediaMTX_Data.PageCount,
-			Items:      MediaMTX_Data.Items,
+			BaseURL:   basePath,
+			PageTitle: "Server Paths",
+			ItemCount: MediaMTX_Data.ItemCount,
+			PageCount: MediaMTX_Data.PageCount,
+			Items:     MediaMTX_Data.Items,
 		}
 		// log.Warn(log.Indent(MediaMTX_Data))
 
@@ -175,12 +178,15 @@ func getEnv() {
 		log.Warnf("Error loading .env file, %s, ignore this if ran in docker", err)
 	}
 
-	MEDIAMTX_WEBRTC_URL = os.Getenv("MEDIAMTX_WEBRTC_URL")
-	MEDIAMTX_HLS_URL = os.Getenv("MEDIAMTX_HLS_URL")
 	MEDIAMTX_API_URL = os.Getenv("MEDIAMTX_API_URL")
 	MEDIAMTX_API_PORT = os.Getenv("MEDIAMTX_API_PORT")
 	MEDIAMTX_USERNAME = os.Getenv("MEDIAMTX_USERNAME")
 	MEDIAMTX_PASSWORD = os.Getenv("MEDIAMTX_PASSWORD")
+
+	MEDIAMTX_WEBRTC_URL = os.Getenv("MEDIAMTX_WEBRTC_URL")
+	MEDIAMTX_HLS_URL = os.Getenv("MEDIAMTX_HLS_URL")
+	MEDIAMTX_RTMP_URL = os.Getenv("MEDIAMTX_RTMP_URL")
+	MEDIAMTX_RTSP_URL = os.Getenv("MEDIAMTX_RTSP_URL")
 
 	APP_PORT := os.Getenv("APP_PORT")
 	if APP_PORT != "" {

@@ -61,8 +61,18 @@ func getMediamtxData(client *http.Client, page, itemsPrePage int) (MediaMTX, err
 	}
 
 	for i, path := range data.Items {
-		path.StreamWebRTC = fmt.Sprintf("%s/%s", MEDIAMTX_WEBRTC_URL, path.Name)
-		path.StreamHls = fmt.Sprintf("%s/%s", MEDIAMTX_HLS_URL, path.Name)
+		if MEDIAMTX_WEBRTC_URL != "" {
+			path.StreamWebRTC = fmt.Sprintf("%s/%s", MEDIAMTX_WEBRTC_URL, path.Name)
+		}
+		if MEDIAMTX_HLS_URL != "" {
+			path.StreamHls = fmt.Sprintf("%s/%s", MEDIAMTX_HLS_URL, path.Name)
+		}
+		if MEDIAMTX_RTMP_URL != "" {
+			path.StreamRtmp = fmt.Sprintf("%s/%s", MEDIAMTX_RTMP_URL, path.Name)
+		}
+		if MEDIAMTX_RTSP_URL != "" {
+			path.StreamRtsp = fmt.Sprintf("%s/%s", MEDIAMTX_RTSP_URL, path.Name)
+		}
 
 		// Add the stream URL
 		if path.Source.Type == "webRTCSession" {

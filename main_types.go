@@ -31,6 +31,8 @@ type Path struct {
 	StreamUrl    string `json:"streamUrl,omitempty"`
 	StreamHls    string `json:"StreamHls,omitempty"`
 	StreamWebRTC string `json:"StreamWebRTC,omitempty"`
+	StreamRtmp   string `json:"StreamRtmp,omitempty"`
+	StreamRtsp   string `json:"StreamRtsp,omitempty"`
 }
 
 type Session struct {

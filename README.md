@@ -19,12 +19,16 @@ https://github.com/McHauge/mediamtx-path-viewer/releases
 # .env file params & docker variables:
 
 ## MediaMTX API
-MEDIAMTX_WEBRTC_URL=https://wbrtc.example.com  
-MEDIAMTX_HLS_URL=https://hls.example.com  
 MEDIAMTX_API_URL=http://api.example.com  
 MEDIAMTX_API_PORT=9997  
 MEDIAMTX_USERNAME=(if enabled in the MediaMTX config)  
 MEDIAMTX_PASSWORD=  
+
+## MediaMTX Base Stream Links Pr. Protocol
+MEDIAMTX_WEBRTC_URL=https://wbrtc.example.com  
+MEDIAMTX_HLS_URL=https://cdn.example.com  
+MEDIAMTX_RTMP_URL=rtmp://cdn.example.com 
+MEDIAMTX_RTSP_URL=rtspt://cdn.example.com 
 
 ## App Settings
 APP_PORT=8080  
