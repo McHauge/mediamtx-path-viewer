@@ -1,0 +1,18 @@
+<!-- HWCs Form based on info from device -->
+<h1 class="mb-4">{{.PageTitle}}</h1>
+
+<div class="card text-bg-danger mb-3 me-4">
+    <div class="card-header mb-0">
+    Error Getting Config from Device
+    </div>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item">
+                <p class="card-text mb-0">Error: {{.Error}}</p>
+            </li>
+            <li class="list-group-item">
+                <p class="card-text fs-6 mb-0">Please check the device settings in "hardware-manager"</p>
+                <p class="card-text fs-6 mb-0">and retry by clicking "Connect" again</p>
+            </li>
+        </ul>
+    </div>
+</div>

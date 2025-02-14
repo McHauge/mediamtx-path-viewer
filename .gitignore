@@ -23,3 +23,25 @@ go.work.sum
 
 # env file
 .env
+
+# env file & config file
+.env
+*.json
+
+# lock files
+*.lock
+
+# Excludable binary files (Skaarhoj format)
+*.ipk
+*.ipks
+
+# Folders
+node_modules/
+bin/
+tmp/
+
+# Generated file that stores the version number and build time
+gitinfo.go
+
+# Include version information on `git archive'
+/internal/version.go export-subst

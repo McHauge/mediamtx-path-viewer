@@ -1,0 +1,39 @@
+<!-- HWCs Form based on info from device -->
+<form>
+    <div class="mb-0">
+        <ul class="list-group fs-5">
+            {{range .Items}}
+            <div class="card mb-3">
+                <div class="card-header mb-0">
+                    <h4 class="card-title mb-2">{{.Name}}</h4>
+                </div>
+                <div class="card-body mb-0">
+                    <div class="d-flex flex-row flex-wrap">
+                        {{if (eq .Ready true)}}
+                        <div class="embed-responsive embed-responsive-16by9">
+                            <!-- <iframe src="{{.StreamUrl}}/?muted=false" scrolling="no" frameborder="0" allow="autoplay;encrypted-media" allowfullscreen></iframe> -->
+                            <iframe height="360px" width="640" class="embed-responsive-item" src="{{.StreamUrl}}/?muted=false&autoplay=false" scrolling="no" frameborder="0" allow="encrypted-media" allowfullscreen></iframe>
+                        </div>
+                        {{end}}
+                        <div class="p-2">
+                            {{if (eq .Source.Type "")}}
+                            {{else}}
+                            <p class="card-text fs-6 mb-0">Source: {{.Source.Type}}</p>
+                            {{end}}
+                            <p class="card-text fs-6 mb-0">Start Time: {{.ReadyTimeStr}}</p>
+                            <p class="card-text fs-6 mb-0">Viewers: {{.TotalReaders}}</p>
+                            <p class="card-text fs-6 mb-0">Tracks:</p>
+                            {{range .Tracks}}
+                            <p class="card-text fs-6 mb-0">  {{.}}</p>
+                            {{end}}
+                        </div>
+                    </div> 
+                </div>
+                <div class="card-footer mb-0">
+                    <a href="{{.StreamUrl}}/?muted=false&autoplay=true">Direct Stream Link</a>
+                </div>
+            </div>
+            {{end}}
+        </ul>
+    </div>
+</form>

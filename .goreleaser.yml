@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=jcroql
+
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate
+
+builds:
+  - id: "Build for all platforms"
+    env:
+      - CGO_ENABLED=0
+    # ldflags: -s -w
+    goos:
+      # - linux
+      # - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm
+      - arm64
+    goarm:
+      - "7"
+      - "6"
+    ignore:
+      # Ignore arm for windows
+      - goos: windows
+        goarch: arm
+      # Ignore arm v4 for macos
+      - goos: darwin
+        goarch: arm
+        goarm: "6"
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{ .CommitDate }} -X main.builtBy=goreleaser -X main.treeState={{ .IsGitDirty }}
+
+# dockers:
+#   - image_templates:
+#       - "mchauge/payhip-discord-bot:stable"
+#       - "mchauge/payhip-discord-bot:v{{ .Version }}-amd64"
+#     dockerfile: dockerfile
+#     goos: linux
+#     goarch: amd64
+#     use: docker

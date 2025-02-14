@@ -1,0 +1,78 @@
+<!-- HWCs Form based on info from device -->
+<h1 class="mb-4">{{.PageTitle}}</h1>
+<form>
+    <div class="mb-3">
+        <button type="submit" class="btn btn-outline-secondary me-1 mb-2" hx-post="{{.BaseURL}}/config-default/" hx-target="#device-profile">
+            Reset Config
+        </button>
+        <button type="submit" class="btn btn-primary me-1 mb-2" hx-post="{{.BaseURL}}/config-save/" hx-swap="none">
+            Save Config
+        </button>
+        <p class="fs-6 fw-lighter fst-italic text-body-secondary">In order for changes to take effect on the device, please remember to restart "hardware-manager"</p>
+    </div>
+    <div class="mb-0">
+        <ul class="list-group fs-5 me-4">
+            {{range .HWCs}}
+            <div class="card mb-3">
+                <div class="card-header mb-0">
+                    {{if (eq .Config.Comment "")}}
+                    <h4 class="card-title mb-2">HWC#{{.HWCid}} - {{.AnalogKey}}</h4>
+                    <p class="card-text fs-6 mb-0">Type: {{.Config.Type}}</p>
+                    {{else}}
+                    <h4 class="card-title mb-2">{{.Config.Comment}}</h4>
+                    <p class="card-text fs-6 mb-0">HWC#{{.HWCid}} - {{.AnalogKey}}</p>
+                    <p class="card-text fs-6 mb-0">Type: {{.Config.Type}}</p>
+                    {{end}}
+                </div>
+                <div class="card-body mb-0">
+
+                    <!-- CenterPoint -->
+                    {{if (eq .Config.Type "Absolute")}}
+                        <label for="CenterPoint_{{.HWCid}}" class="card-text fs-6">Center Point:</label>
+                        <output class="card-text fs-6" id="num">{{.Config.CenterPoint}}</output>
+                        <input type="range" class="form-range" min="0" max="4000" step="1" value="{{.Config.CenterPoint}}" oninput="this.previousElementSibling.value = this.value" id="CenterPoint_{{.HWCid}}" name="CenterPoint_{{.HWCid}}">
+                    {{else}}
+                        <label for="CenterPoint_{{.HWCid}}" class="card-text fs-6">Center Point: Disabled</label>
+                        <input type="range" class="form-range" id="CenterPoint_{{.HWCid}}" disabled>
+                    {{end}}
+
+                    <!-- Deadzone -->
+                    <label for="Deadzone_{{.HWCid}}" class="card-text fs-6">Deadzone:</label>
+                    <output class="card-text fs-6" id="num_">{{.Config.Deadzone}}</output>
+                    <input type="range" class="form-range" min="0" max="2000" step="1" value="{{.Config.Deadzone}}" oninput="this.previousElementSibling.value = this.value" id="Deadzone_{{.HWCid}}" name="Deadzone_{{.HWCid}}">
+
+                    <!-- End Point -->
+                    <label for="End_{{.HWCid}}" class="card-text fs-6">End Point:</label>
+                    <output class="card-text fs-6" id="num_">{{.Config.End}}</output>
+                    <input type="range" class="form-range" min="0" max="4000" step="1" value="{{.Config.End}}" oninput="this.previousElementSibling.value = this.value" id="End_{{.HWCid}}" name="End_{{.HWCid}}">
+
+                    <!-- Start Point -->
+                    <label for="Start_{{.HWCid}}" class="card-text fs-6">Start Point:</label>
+                    <output class="card-text fs-6" id="num_">{{.Config.Start}}</output>
+                    <input type="range" class="form-range" min="0" max="4000" step="1" value="{{.Config.Start}}" oninput="this.previousElementSibling.value = this.value" id="Start_{{.HWCid}}" name="Start_{{.HWCid}}">
+
+                    <!-- Tolerance -->
+                    <label for="Tolerance_{{.HWCid}}" class="card-text fs-6">Tolerance:</label>
+                    <output class="card-text fs-6" id="num_">{{.Config.Tolerance}}</output>
+                    <input type="range" class="form-range" min="0" max="500" step="1" value="{{.Config.Tolerance}}" oninput="this.previousElementSibling.value = this.value" id="Tolerance_{{.HWCid}}" name="Tolerance_{{.HWCid}}">
+
+                </div>
+            </div>
+
+            <!-- <li class="list-group-item">
+                    <p class="mb-0">HWC ID: {{.HWCid}}</p>
+                    <p class="mb-0">Analog Key: {{.AnalogKey}}</p>
+                    <div class="container">
+                        <p class="mb-0">Type: {{.Config.Type}}</p>
+                        <p class="mb-0">Comment: {{.Config.Comment}}</p>
+                        <p class="mb-0">CenterPoint: {{.Config.CenterPoint}}</p>
+                        <p class="mb-0">Deadzone: {{.Config.Deadzone}}</p>
+                        <p class="mb-0">End: {{.Config.End}}</p>
+                        <p class="mb-0">Start: {{.Config.Start}}</p>
+                        <p class="mb-0">Tolerance: {{.Config.Tolerance}}</p>
+                    </div>
+                </li> -->
+            {{end}}
+        </ul>
+    </div>
+</form>
