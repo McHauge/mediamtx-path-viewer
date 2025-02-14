@@ -41,8 +41,8 @@ var (
 	MEDIAMTX_PASSWORD   string
 
 	// Default values
-	basePath = "/"    // Default to /monitor
-	port     = "8081" // Default to 8080
+	basePath = ""     // Default to /monitor
+	port     = "8080" // Default to 8080
 
 	// Boot Params
 	// Version flag
@@ -83,7 +83,7 @@ func main() {
 	setupRoutes(&router, client)
 
 	log.Info("Starting MediaMTX Path Viewer")
-	log.Infof("Listening on port %s, via Path: %s", port, basePath)
+	log.Infof("Listening on port %s, via link: http://localhost:%s%s", port, port, basePath)
 	if err := http.ListenAndServe(fmt.Sprintf(":%s", port), &router); err != http.ErrServerClosed {
 		// unexpected error. socket in use?
 		log.Fatalf("ListenAndServe: %v", err)
@@ -190,6 +190,14 @@ func getEnv() {
 	APP_PATH := os.Getenv("APP_PATH")
 	if APP_PATH != "" {
 		basePath = APP_PATH
+	}
+
+	// Check if the basePath is set correctly
+	if basePath != "" && !strings.HasPrefix(basePath, "/") {
+		basePath = "/" + basePath
+	}
+	if basePath != "" && strings.HasSuffix(basePath, "/") {
+		basePath = strings.TrimSuffix(basePath, "/")
 	}
 
 	// Check if the MediaMTX Host is defined
