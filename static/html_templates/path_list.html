@@ -33,7 +33,26 @@
                 <div class="card-footer mb-0">
                     <script>
                         function sendToClipBoard(text) {
-                            navigator.clipboard.writeText(text);
+                            if (window.isSecureContext && navigator.clipboard) {
+                                navigator.clipboard.writeText(text);
+                            } else {
+                                unsecuredCopyToClipboard(text);
+                            }
+                        }
+
+                        // If not over HTTPS, use this function instead
+                        function unsecuredCopyToClipboard(text) {
+                            const textArea = document.createElement("textarea");
+                            textArea.value = text;
+                            document.body.appendChild(textArea);
+                            textArea.focus();
+                            textArea.select();
+                            try {
+                                document.execCommand('copy');
+                            } catch (err) {
+                                console.error('Unable to copy to clipboard', err);
+                            }
+                            document.body.removeChild(textArea);
                         }
                     </script>
                     <div class="d-grid gap-2 d-md-block">
