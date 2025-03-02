@@ -9,6 +9,9 @@ But you can chose with the app settings what you want it to be.
 
 By default the app will show the HLS feed for everything other than a paths that are specifically published as a WebRTC feed
 
+Unraid link for icon on docker page:
+127.0.0.1/(app path)/static/pictures/icon.png
+
 # Deployments
 You can find docker builds ready for use here:  
 https://hub.docker.com/r/mchauge/mediamtx-path-viewer
