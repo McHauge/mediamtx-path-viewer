@@ -1,7 +1,7 @@
 # Specifies a parent image
-FROM golang:1.23.5-alpine
+FROM golang:1.24-alpine
 
-LABEL version="v1.0.3"
+LABEL version="v1.3.5"
 
 # Creates an app directory to hold your app’s source code
 WORKDIR /app

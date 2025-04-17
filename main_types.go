@@ -18,12 +18,15 @@ type MediaMTX struct {
 }
 
 type Path struct {
-	Name      string    `json:"name"`
-	Source    Session   `json:"source"`
-	Ready     bool      `json:"ready"`
-	ReadyTime time.Time `json:"readyTime"`
-	Tracks    []string  `json:"tracks"`
-	Readers   []Session `json:"readers"`
+	Name       string    `json:"name"`     // shows the actual url path
+	ConfName   string    `json:"confName"` // shows the path in the config, so for non-defined path's this shows up as: "all_others"
+	PrettyName string    // internaly created
+	PathName   string    // internaly created
+	Source     Session   `json:"source"`
+	Ready      bool      `json:"ready"`
+	ReadyTime  time.Time `json:"readyTime"`
+	Tracks     []string  `json:"tracks"`
+	Readers    []Session `json:"readers"`
 
 	// Added internaly
 	ID           string `json:"id,omitempty"`

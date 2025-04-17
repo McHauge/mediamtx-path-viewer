@@ -5,7 +5,11 @@
             {{range .Items}}
             <div class="card mb-3">
                 <div class="card-header mb-0">
-                    <h4 class="card-title mb-0">{{.Name}}</h4>
+                    {{if (eq .PathName "")}}
+                    <h4 class="card-title mb-0">{{.PrettyName}}</h4>
+                    {{else}}
+                    <h4 class="card-title mb-0">{{.PathName}} - {{.PrettyName}}</h4>
+                    {{end}}
                 </div>
                 <div class="card-body mb-0 p-0">
                     <div class="d-flex flex-row flex-wrap">

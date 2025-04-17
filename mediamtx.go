@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 )
@@ -62,32 +63,17 @@ func getMediamtxPaths(client *http.Client, page, itemsPrePage int) (MediaMTX, er
 	}
 
 	for i, path := range data.Items {
-		path.ID = strings.ReplaceAll(path.Name, "/", "-")
+		path.ID = strings.ReplaceAll(path.ConfName, "/", "-")
 
-		if MEDIAMTX_WEBRTC_URL != "" {
-			path.StreamWebRTC = fmt.Sprintf("%s/%s", MEDIAMTX_WEBRTC_URL, path.Name)
-		}
-		if MEDIAMTX_HLS_URL != "" {
-			path.StreamHls = fmt.Sprintf("%s/%s", MEDIAMTX_HLS_URL, path.Name)
-		}
-		if MEDIAMTX_RTMP_URL != "" {
-			path.StreamRtmp = fmt.Sprintf("%s/%s", MEDIAMTX_RTMP_URL, path.Name)
-		}
-		if MEDIAMTX_RTSP_URL != "" {
-			path.StreamRtsp = fmt.Sprintf("%s/%s", MEDIAMTX_RTSP_URL, path.Name)
-		}
-
-		// Add the stream URL
-		if path.Source.Type == "webRTCSession" {
-			path.StreamUrl = fmt.Sprintf("%s/%s", MEDIAMTX_WEBRTC_URL, path.Name)
-		} else {
-			path.StreamUrl = fmt.Sprintf("%s/%s", MEDIAMTX_HLS_URL, path.Name)
-		}
+		// Format the path data
+		path = formatPathData(path)
 
 		// Add the total readers
 		path.TotalReaders = len(path.Readers)
 		data.Items[i] = path
 	}
+
+	data.Items = sortPaths(data.Items)
 
 	return data, err
 }
@@ -140,29 +126,70 @@ func getMediamtxPath(client *http.Client, path string) (Path, error) {
 		data.ReadyTimeStr = data.ReadyTime.Format("2006-01-02 15:04:05")
 	}
 
-	data.ID = strings.ReplaceAll(data.Name, "/", "-")
-	if MEDIAMTX_WEBRTC_URL != "" {
-		data.StreamWebRTC = fmt.Sprintf("%s/%s", MEDIAMTX_WEBRTC_URL, data.Name)
-	}
-	if MEDIAMTX_HLS_URL != "" {
-		data.StreamHls = fmt.Sprintf("%s/%s", MEDIAMTX_HLS_URL, data.Name)
-	}
-	if MEDIAMTX_RTMP_URL != "" {
-		data.StreamRtmp = fmt.Sprintf("%s/%s", MEDIAMTX_RTMP_URL, data.Name)
-	}
-	if MEDIAMTX_RTSP_URL != "" {
-		data.StreamRtsp = fmt.Sprintf("%s/%s", MEDIAMTX_RTSP_URL, data.Name)
-	}
-
-	// Add the stream URL
-	if data.Source.Type == "webRTCSession" {
-		data.StreamUrl = fmt.Sprintf("%s/%s", MEDIAMTX_WEBRTC_URL, data.Name)
-	} else {
-		data.StreamUrl = fmt.Sprintf("%s/%s", MEDIAMTX_HLS_URL, data.Name)
-	}
+	// Format the path data
+	data = formatPathData(data)
 
 	// Add the total readers
 	data.TotalReaders = len(data.Readers)
 
 	return data, err
+}
+
+func formatPathData(path Path) Path {
+	path.ID = strings.ReplaceAll(path.Name, "/", "-")
+
+	if MEDIAMTX_WEBRTC_URL != "" {
+		path.StreamWebRTC = fmt.Sprintf("%s/%s", MEDIAMTX_WEBRTC_URL, path.Name)
+	}
+	if MEDIAMTX_HLS_URL != "" {
+		path.StreamHls = fmt.Sprintf("%s/%s", MEDIAMTX_HLS_URL, path.Name)
+	}
+	if MEDIAMTX_RTMP_URL != "" {
+		path.StreamRtmp = fmt.Sprintf("%s/%s", MEDIAMTX_RTMP_URL, path.Name)
+	}
+	if MEDIAMTX_RTSP_URL != "" {
+		path.StreamRtsp = fmt.Sprintf("%s/%s", MEDIAMTX_RTSP_URL, path.Name)
+	}
+
+	// Add the stream URL
+	if path.Source.Type == "webRTCSession" {
+		path.StreamUrl = fmt.Sprintf("%s/%s", MEDIAMTX_WEBRTC_URL, path.Name)
+	} else {
+		path.StreamUrl = fmt.Sprintf("%s/%s", MEDIAMTX_HLS_URL, path.Name)
+	}
+
+	// Pretty Name & Path
+	x := strings.Split(path.Name, "/")
+	for i := 0; i < len(x); i++ {
+		x[i] = strings.ToUpper(string(x[i][0])) + x[i][1:] // only first letter upper case
+	}
+	if len(x) > 1 {
+		path.PrettyName = x[len(x)-1]
+		path.PathName = strings.Join(x[:len(x)-1], "/")
+	} else {
+		path.PrettyName = x[0]
+		path.PathName = "" // no path / using root path
+	}
+
+	if strings.Contains(path.PrettyName, "_") {
+		x := strings.Split(path.PrettyName, "_")
+		for i := 0; i < len(x); i++ {
+			x[i] = strings.ToUpper(string(x[i][0])) + x[i][1:] // only first letter upper case
+		}
+		path.PrettyName = strings.Join(x, " ")
+	}
+
+	return path
+}
+
+// sortPaths takes in a list of paths and then first sorts them by the root path, then sub path and then by the name
+func sortPaths(paths []Path) []Path {
+	// Sort the paths by the PathName and then by the Name
+	sort.Slice(paths, func(i, j int) bool {
+		if paths[i].PathName == paths[j].PathName {
+			return paths[i].PrettyName < paths[j].PrettyName
+		}
+		return paths[i].PathName < paths[j].PathName
+	})
+	return paths
 }
