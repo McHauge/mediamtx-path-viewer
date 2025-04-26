@@ -203,6 +203,11 @@ func serveStatic(router *http.ServeMux) {
 		log.Should(err)
 		http.ServeContent(w, r, "htmx.min.js", time.Now(), bytes.NewReader(file))
 	})
+	router.HandleFunc(basePath+"/static/js/hls.js", func(w http.ResponseWriter, r *http.Request) {
+		file, err := res.ReadFile("static/js/hls.js")
+		log.Should(err)
+		http.ServeContent(w, r, "hls.js", time.Now(), bytes.NewReader(file))
+	})
 }
 
 func getEnv() {
