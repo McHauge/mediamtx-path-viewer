@@ -40,11 +40,13 @@ builds:
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{ .CommitDate }} -X main.builtBy=goreleaser -X main.treeState={{ .IsGitDirty }}
 
-# dockers:
-#   - image_templates:
-#       - "mchauge/payhip-discord-bot:stable"
-#       - "mchauge/payhip-discord-bot:v{{ .Version }}-amd64"
-#     dockerfile: dockerfile
-#     goos: linux
-#     goarch: amd64
-#     use: docker
+dockers:
+  - image_templates:
+      - "mchauge/mediamtx-path-viewer:stable"
+      - "mchauge/mediamtx-path-viewer:v{{ .Version }}"
+    dockerfile: dockerfile
+    goos: linux
+    goarch: amd64
+    use: docker
+    build_flag_templates:
+      - "--build-arg=VERSION={{ .Version }}"

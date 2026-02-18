@@ -43,5 +43,8 @@ tmp/
 # Generated file that stores the version number and build time
 gitinfo.go
 
+# Binary downloaded for manual docker builds
+mediamtx-path-viewer
+
 # Include version information on `git archive'
 /internal/version.go export-subst

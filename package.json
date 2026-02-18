@@ -9,8 +9,8 @@
         "test": "go generate && cross-env CLICOLOR_FORCE=1 LOG=ln go run .",
         "tidy": "go mod tidy",
         "generate": "go generate",
-        "build_docker": "docker build --build-arg VERSION=${VERSION:-$(git describe --tags --abbrev=0 | sed 's/^v//')} -t mchauge/mediamtx-path-viewer:stable .",
-        "build_docker_beta": "docker build --build-arg VERSION=${VERSION:-$(git describe --tags --abbrev=0 | sed 's/^v//')} -t mchauge/mediamtx-path-viewer:beta .",
+        "build_docker": "VERSION=${VERSION:-$(git describe --tags --abbrev=0 | sed 's/^v//')} && curl -fSL https://github.com/McHauge/mediamtx-path-viewer/releases/download/v${VERSION}/mediamtx-path-viewer_${VERSION}_linux_amd64.tar.gz | tar -xzf - mediamtx-path-viewer && docker build --build-arg VERSION=${VERSION} -t mchauge/mediamtx-path-viewer:stable . && rm -f mediamtx-path-viewer",
+        "build_docker_beta": "VERSION=${VERSION:-$(git describe --tags --abbrev=0 | sed 's/^v//')} && curl -fSL https://github.com/McHauge/mediamtx-path-viewer/releases/download/v${VERSION}/mediamtx-path-viewer_${VERSION}_linux_amd64.tar.gz | tar -xzf - mediamtx-path-viewer && docker build --build-arg VERSION=${VERSION} -t mchauge/mediamtx-path-viewer:beta . && rm -f mediamtx-path-viewer",
         "docker_push": "yarn build_docker && docker push mchauge/mediamtx-path-viewer:stable",
         "docker_push_beta": "yarn build_docker_beta && docker push mchauge/mediamtx-path-viewer:beta"
     },
