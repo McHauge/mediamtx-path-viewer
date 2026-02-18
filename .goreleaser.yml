@@ -40,10 +40,26 @@ builds:
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{ .CommitDate }} -X main.builtBy=goreleaser -X main.treeState={{ .IsGitDirty }}
 
+release:
+  prerelease: auto
+
 dockers:
+  # Stable release — pushed only for non-prerelease tags (e.g. v1.0.0)
   - image_templates:
       - "mchauge/mediamtx-path-viewer:stable"
       - "mchauge/mediamtx-path-viewer:v{{ .Version }}"
+    skip_push: "{{ if .Prerelease }}true{{ else }}false{{ end }}"
+    dockerfile: dockerfile
+    goos: linux
+    goarch: amd64
+    use: docker
+    build_flag_templates:
+      - "--build-arg=VERSION={{ .Version }}"
+
+  # Beta/pre-release — pushed only for prerelease tags (e.g. v1.0.0-beta, v1.0.0-pre)
+  - image_templates:
+      - "mchauge/mediamtx-path-viewer:beta"
+    skip_push: "{{ if .Prerelease }}false{{ else }}true{{ end }}"
     dockerfile: dockerfile
     goos: linux
     goarch: amd64
