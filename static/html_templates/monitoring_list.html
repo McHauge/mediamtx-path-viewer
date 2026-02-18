@@ -92,6 +92,33 @@
     </div>
 </div>
 
+<!-- Viewers by Country -->
+{{if .CountrySummaries}}
+<div class="stream-group mb-4">
+    <div class="stream-group-header" data-bs-toggle="collapse" data-bs-target="#countrySummary" aria-expanded="true">
+        <h5>
+            <span class="collapse-icon">&#9660;</span>
+            Viewers by Country
+            <span class="badge bg-secondary">{{len .CountrySummaries}}</span>
+        </h5>
+    </div>
+    <div class="collapse show" id="countrySummary">
+        <div class="row g-2">
+            {{range .CountrySummaries}}
+            <div class="col-auto">
+                <div class="card monitoring-stat-card">
+                    <div class="card-body py-2 px-3 text-center">
+                        <div class="stat-label">{{.Country}}</div>
+                        <div class="stat-value" style="font-size: 1.25rem;">{{.Count}}</div>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </div>
+</div>
+{{end}}
+
 <!-- Per-Stream Summary -->
 <div class="stream-group mb-4">
     <div class="stream-group-header" data-bs-toggle="collapse" data-bs-target="#perStreamSummary" aria-expanded="true">
@@ -159,6 +186,7 @@
                 <thead>
                     <tr>
                         <th>Remote Address</th>
+                        <th>Country</th>
                         <th>State</th>
                         <th>Path</th>
                         <th>Received</th>
@@ -171,6 +199,7 @@
                     {{range .WebRTCSessions}}
                     <tr>
                         <td>{{.RemoteAddr}}</td>
+                        <td>{{if .Country}}{{.Country}}{{else}}<span class="text-muted">-</span>{{end}}</td>
                         <td><span class="badge {{if eq .State "read"}}bg-success{{else if eq .State "publish"}}bg-warning{{else}}bg-secondary{{end}}">{{.State}}</span></td>
                         <td><code>{{.Path}}</code></td>
                         <td>{{.BytesReceivedStr}}</td>
@@ -204,6 +233,7 @@
                 <thead>
                     <tr>
                         <th>Remote Address</th>
+                        <th>Country</th>
                         <th>State</th>
                         <th>Path</th>
                         <th>Transport</th>
@@ -216,6 +246,7 @@
                     {{range .RTSPSessions}}
                     <tr>
                         <td>{{.RemoteAddr}}</td>
+                        <td>{{if .Country}}{{.Country}}{{else}}<span class="text-muted">-</span>{{end}}</td>
                         <td><span class="badge {{if eq .State "read"}}bg-success{{else if eq .State "publish"}}bg-warning{{else}}bg-secondary{{end}}">{{.State}}</span></td>
                         <td><code>{{.Path}}</code></td>
                         <td>{{if .Transport}}{{.Transport}}{{else}}<span class="text-muted">-</span>{{end}}</td>
@@ -249,6 +280,7 @@
                 <thead>
                     <tr>
                         <th>Remote Address</th>
+                        <th>Country</th>
                         <th>State</th>
                         <th>Path</th>
                         <th>Received</th>
@@ -259,6 +291,7 @@
                     {{range .RTMPConns}}
                     <tr>
                         <td>{{.RemoteAddr}}</td>
+                        <td>{{if .Country}}{{.Country}}{{else}}<span class="text-muted">-</span>{{end}}</td>
                         <td><span class="badge {{if eq .State "read"}}bg-success{{else if eq .State "publish"}}bg-warning{{else}}bg-secondary{{end}}">{{.State}}</span></td>
                         <td><code>{{.Path}}</code></td>
                         <td>{{.BytesReceivedStr}}</td>
@@ -329,6 +362,7 @@
                 <thead>
                     <tr>
                         <th>Remote Address</th>
+                        <th>Country</th>
                         <th>State</th>
                         <th>Path</th>
                         <th>Received</th>
@@ -339,6 +373,7 @@
                     {{range .SRTConns}}
                     <tr>
                         <td>{{.RemoteAddr}}</td>
+                        <td>{{if .Country}}{{.Country}}{{else}}<span class="text-muted">-</span>{{end}}</td>
                         <td><span class="badge {{if eq .State "read"}}bg-success{{else if eq .State "publish"}}bg-warning{{else}}bg-secondary{{end}}">{{.State}}</span></td>
                         <td><code>{{.Path}}</code></td>
                         <td>{{.BytesReceivedStr}}</td>

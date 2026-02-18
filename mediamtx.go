@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -381,21 +384,233 @@ func groupRecordings(recordings []Recording) []RecordingGroup {
 
 // Monitoring API functions
 
-func formatBytes(bytes uint64) string {
+// GeoIP cache
+var (
+	geoCache   = make(map[string]GeoIPResult)
+	geoCacheMu sync.RWMutex
+)
+
+// extractIP strips the port from a remoteAddr string (e.g., "1.2.3.4:5678" -> "1.2.3.4")
+func extractIP(remoteAddr string) string {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return remoteAddr
+	}
+	return host
+}
+
+// lookupGeoIP does a batch GeoIP lookup via ip-api.com for any IPs not already cached.
+// It returns a map from IP to GeoIPResult.
+func lookupGeoIP(client *http.Client, ips []string) map[string]GeoIPResult {
+	result := make(map[string]GeoIPResult)
+
+	// Collect unique IPs that need lookup
+	var toLookup []string
+	seen := make(map[string]bool)
+
+	geoCacheMu.RLock()
+	for _, ip := range ips {
+		if ip == "" || seen[ip] {
+			continue
+		}
+		seen[ip] = true
+		if cached, ok := geoCache[ip]; ok {
+			result[ip] = cached
+		} else {
+			toLookup = append(toLookup, ip)
+		}
+	}
+	geoCacheMu.RUnlock()
+
+	if len(toLookup) == 0 {
+		return result
+	}
+
+	// Build batch request (ip-api.com allows up to 100 per batch)
+	type batchQuery struct {
+		Query  string `json:"query"`
+		Fields string `json:"fields"`
+	}
+	batch := make([]batchQuery, 0, len(toLookup))
+	for _, ip := range toLookup {
+		batch = append(batch, batchQuery{
+			Query:  ip,
+			Fields: "status,country,countryCode,query",
+		})
+	}
+
+	body, err := json.Marshal(batch)
+	if err != nil {
+		return result
+	}
+
+	req, err := http.NewRequest("POST", "http://ip-api.com/batch?fields=status,country,countryCode,query", bytes.NewReader(body))
+	if err != nil {
+		return result
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return result
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return result
+	}
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return result
+	}
+
+	var results []GeoIPResult
+	if err := json.Unmarshal(respBody, &results); err != nil {
+		return result
+	}
+
+	// Update cache and result map
+	geoCacheMu.Lock()
+	for _, r := range results {
+		if r.Status == "success" {
+			geoCache[r.Query] = r
+			result[r.Query] = r
+		}
+	}
+	geoCacheMu.Unlock()
+
+	return result
+}
+
+// collectRemoteIPs extracts unique IPs from all connection types
+func collectRemoteIPs(
+	webrtcSessions []WebRTCSession,
+	rtspSessions []RTSPSession,
+	rtmpConns []RTMPConn,
+	srtConns []SRTConn,
+) []string {
+	seen := make(map[string]bool)
+	var ips []string
+
+	addIP := func(remoteAddr string) {
+		ip := extractIP(remoteAddr)
+		if ip != "" && !seen[ip] {
+			seen[ip] = true
+			ips = append(ips, ip)
+		}
+	}
+
+	for _, s := range webrtcSessions {
+		addIP(s.RemoteAddr)
+	}
+	for _, s := range rtspSessions {
+		addIP(s.RemoteAddr)
+	}
+	for _, c := range rtmpConns {
+		addIP(c.RemoteAddr)
+	}
+	for _, c := range srtConns {
+		addIP(c.RemoteAddr)
+	}
+
+	return ips
+}
+
+// applyGeoData enriches connection structs with country info and returns a country summary
+func applyGeoData(
+	geoMap map[string]GeoIPResult,
+	webrtcSessions []WebRTCSession,
+	rtspSessions []RTSPSession,
+	rtmpConns []RTMPConn,
+	srtConns []SRTConn,
+) []CountrySummary {
+	countryCount := make(map[string]*CountrySummary)
+	var countryOrder []string
+
+	addCountry := func(ip string) {
+		geo, ok := geoMap[ip]
+		if !ok || geo.Country == "" {
+			return
+		}
+		if _, exists := countryCount[geo.CountryCode]; !exists {
+			countryCount[geo.CountryCode] = &CountrySummary{
+				Country:     geo.Country,
+				CountryCode: geo.CountryCode,
+			}
+			countryOrder = append(countryOrder, geo.CountryCode)
+		}
+		countryCount[geo.CountryCode].Count++
+	}
+
+	for i, s := range webrtcSessions {
+		ip := extractIP(s.RemoteAddr)
+		if geo, ok := geoMap[ip]; ok {
+			webrtcSessions[i].Country = geo.Country
+			webrtcSessions[i].CountryCode = geo.CountryCode
+		}
+		if s.State == "read" {
+			addCountry(ip)
+		}
+	}
+	for i, s := range rtspSessions {
+		ip := extractIP(s.RemoteAddr)
+		if geo, ok := geoMap[ip]; ok {
+			rtspSessions[i].Country = geo.Country
+			rtspSessions[i].CountryCode = geo.CountryCode
+		}
+		if s.State == "read" {
+			addCountry(ip)
+		}
+	}
+	for i, c := range rtmpConns {
+		ip := extractIP(c.RemoteAddr)
+		if geo, ok := geoMap[ip]; ok {
+			rtmpConns[i].Country = geo.Country
+			rtmpConns[i].CountryCode = geo.CountryCode
+		}
+		if c.State == "read" {
+			addCountry(ip)
+		}
+	}
+	for i, c := range srtConns {
+		ip := extractIP(c.RemoteAddr)
+		if geo, ok := geoMap[ip]; ok {
+			srtConns[i].Country = geo.Country
+			srtConns[i].CountryCode = geo.CountryCode
+		}
+		if c.State == "read" {
+			addCountry(ip)
+		}
+	}
+
+	// Build sorted summary (by count descending)
+	summaries := make([]CountrySummary, 0, len(countryOrder))
+	for _, code := range countryOrder {
+		summaries = append(summaries, *countryCount[code])
+	}
+	sort.Slice(summaries, func(i, j int) bool {
+		return summaries[i].Count > summaries[j].Count
+	})
+
+	return summaries
+}
+
+func formatBytes(b uint64) string {
 	const (
 		KB = 1024
 		MB = KB * 1024
 		GB = MB * 1024
 	)
 	switch {
-	case bytes >= GB:
-		return fmt.Sprintf("%.1f GB", float64(bytes)/float64(GB))
-	case bytes >= MB:
-		return fmt.Sprintf("%.1f MB", float64(bytes)/float64(MB))
-	case bytes >= KB:
-		return fmt.Sprintf("%.1f KB", float64(bytes)/float64(KB))
+	case b >= GB:
+		return fmt.Sprintf("%.1f GB", float64(b)/float64(GB))
+	case b >= MB:
+		return fmt.Sprintf("%.1f MB", float64(b)/float64(MB))
+	case b >= KB:
+		return fmt.Sprintf("%.1f KB", float64(b)/float64(KB))
 	default:
-		return fmt.Sprintf("%d B", bytes)
+		return fmt.Sprintf("%d B", b)
 	}
 }
 

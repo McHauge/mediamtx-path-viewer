@@ -161,6 +161,8 @@ type RTSPSession struct {
 	BytesReceivedStr    string
 	BytesSentStr        string
 	RTPPacketsJitterStr string
+	Country             string
+	CountryCode         string
 }
 
 type RTMPConnList struct {
@@ -181,6 +183,8 @@ type RTMPConn struct {
 	// Derived
 	BytesReceivedStr string
 	BytesSentStr     string
+	Country          string
+	CountryCode      string
 }
 
 type SRTConnList struct {
@@ -200,6 +204,8 @@ type SRTConn struct {
 	// Derived
 	BytesReceivedStr string
 	BytesSentStr     string
+	Country          string
+	CountryCode      string
 }
 
 type WebRTCSessionList struct {
@@ -228,6 +234,23 @@ type WebRTCSession struct {
 	BytesReceivedStr    string
 	BytesSentStr        string
 	RTPPacketsJitterStr string
+	Country             string
+	CountryCode         string
+}
+
+// GeoIPResult represents the response from ip-api.com
+type GeoIPResult struct {
+	Status      string `json:"status"`
+	Country     string `json:"country"`
+	CountryCode string `json:"countryCode"`
+	Query       string `json:"query"`
+}
+
+// CountrySummary shows viewer count per country
+type CountrySummary struct {
+	Country     string
+	CountryCode string
+	Count       int
 }
 
 type StreamSummary struct {
@@ -259,6 +282,7 @@ type MonitoringHTMLdata struct {
 	HLSCount          int
 	SRTCount          int
 	StreamSummaries   []StreamSummary
+	CountrySummaries  []CountrySummary
 	WebRTCSessions    []WebRTCSession
 	RTSPSessions      []RTSPSession
 	RTMPConns         []RTMPConn

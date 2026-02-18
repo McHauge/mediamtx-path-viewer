@@ -430,6 +430,11 @@ func setupRoutes(router *http.ServeMux, client *http.Client, playbackClient *htt
 			srtConns.Items,
 		)
 
+		// GeoIP lookup for viewer countries
+		remoteIPs := collectRemoteIPs(webrtcSessions.Items, rtspSessions.Items, rtmpConns.Items, srtConns.Items)
+		geoMap := lookupGeoIP(client, remoteIPs)
+		countrySummaries := applyGeoData(geoMap, webrtcSessions.Items, rtspSessions.Items, rtmpConns.Items, srtConns.Items)
+
 		// Calculate totals
 		var totalViewers int
 		var totalBytes uint64
@@ -451,6 +456,7 @@ func setupRoutes(router *http.ServeMux, client *http.Client, playbackClient *htt
 			HLSCount:          hlsMuxers.ItemCount,
 			SRTCount:          srtConns.ItemCount,
 			StreamSummaries:   summaries,
+			CountrySummaries:  countrySummaries,
 			WebRTCSessions:    webrtcSessions.Items,
 			RTSPSessions:      rtspSessions.Items,
 			RTMPConns:         rtmpConns.Items,
