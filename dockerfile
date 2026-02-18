@@ -1,9 +1,9 @@
-# Specifies a parent image
-FROM golang:1.26-alpine
+# Uses minimal Alpine base instead of the full Go toolchain image
+FROM alpine:3.21
 
-LABEL version="v1.3.5"
+ARG VERSION
+LABEL version="v${VERSION}"
 
-# Creates an app directory to hold your app’s source code
 WORKDIR /app
 
 # ENV Variables:
@@ -22,15 +22,13 @@ ENV APP_PATH=""
 
 EXPOSE ${APP_PORT}
 
-# pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
-COPY go.mod go.sum ./
-RUN go mod download && go mod verify
-
-# Copies everything from your root directory into /app
-COPY . .
-
-# Builds your app with optional configuration
-RUN go build -v -o ./app/mediamtx-path-viewer .
+# Download pre-built binary from GitHub release
+RUN apk add --no-cache ca-certificates && \
+    wget -qO /tmp/release.tar.gz \
+      "https://github.com/McHauge/mediamtx-path-viewer/releases/download/v${VERSION}/mediamtx-path-viewer_${VERSION}_linux_amd64.tar.gz" && \
+    tar -xzf /tmp/release.tar.gz -C /app && \
+    rm /tmp/release.tar.gz && \
+    chmod +x /app/mediamtx-path-viewer
 
 # Specifies the executable command that runs when the container starts
-CMD [ "./app/mediamtx-path-viewer" ]
+CMD ["./mediamtx-path-viewer"]
