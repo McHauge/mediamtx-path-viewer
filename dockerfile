@@ -23,11 +23,11 @@ ENV APP_PATH=""
 EXPOSE ${APP_PORT}
 
 # Download pre-built binary from GitHub release
-RUN apk add --no-cache ca-certificates && \
-    wget -qO /tmp/release.tar.gz \
-      "https://github.com/McHauge/mediamtx-path-viewer/releases/download/v${VERSION}/mediamtx-path-viewer_${VERSION}_linux_amd64.tar.gz" && \
+RUN apk add --no-cache ca-certificates curl && \
+    curl -fSL "https://github.com/McHauge/mediamtx-path-viewer/releases/download/v${VERSION}/mediamtx-path-viewer_${VERSION}_linux_amd64.tar.gz" -o /tmp/release.tar.gz && \
     tar -xzf /tmp/release.tar.gz -C /app && \
     rm /tmp/release.tar.gz && \
+    apk del curl && \
     chmod +x /app/mediamtx-path-viewer
 
 # Specifies the executable command that runs when the container starts
