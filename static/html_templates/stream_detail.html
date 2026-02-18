@@ -1,0 +1,79 @@
+<!-- Modal title OOB update -->
+<h5 class="modal-title" id="streamDetailModalLabel" hx-swap-oob="true">{{if (ne .PathName "")}}{{.PathName}} / {{end}}{{.PrettyName}}</h5>
+
+<!-- Video Player -->
+{{if (eq .Ready true)}}
+    {{if (eq .Source.Type "webRTCSession")}}
+    <div class="video-container">
+        <iframe src="{{.StreamUrl}}" scrolling="no" allowfullscreen></iframe>
+    </div>
+    {{else}}
+    <div class="video-container">
+        <video id="detail-{{.ID}}" controls></video>
+    </div>
+    <script>
+        (function() {
+            var video = document.getElementById('detail-{{.ID}}');
+            if (!video) return;
+            video.muted = true;
+            video.setAttribute("playsinline", "");
+            if (Hls.isSupported()) {
+                var hls = new Hls();
+                hls.loadSource('{{.StreamUrl}}/index.m3u8');
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() { video.play(); });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = '{{.StreamUrl}}/index.m3u8';
+                video.addEventListener('loadedmetadata', function() { video.play(); });
+            }
+        })();
+    </script>
+    {{end}}
+{{else}}
+<div class="video-container d-flex align-items-center justify-content-center">
+    <span class="text-muted">Stream not ready</span>
+</div>
+{{end}}
+
+<!-- Metadata -->
+<dl class="detail-meta row mt-3 mb-2">
+    {{if (ne .Source.Type "")}}
+    <dt class="col-sm-4">Source</dt>
+    <dd class="col-sm-8"><span class="badge bg-info badge-source">{{.Source.Type}}</span></dd>
+    {{end}}
+
+    <dt class="col-sm-4">Viewers</dt>
+    <dd class="col-sm-8">
+        <span hx-get="{{.BaseURL}}/viewCount/{{.ID}}" hx-trigger="every 5s" hx-target="#detailViewCount_{{.ID}}">
+            <span id="detailViewCount_{{.ID}}">{{.TotalReaders}}</span>
+        </span>
+    </dd>
+
+    {{if (ne .ReadyTimeStr "")}}
+    <dt class="col-sm-4">Started</dt>
+    <dd class="col-sm-8">{{.ReadyTimeStr}}</dd>
+    {{end}}
+
+    {{if .Tracks}}
+    <dt class="col-sm-4">Tracks</dt>
+    <dd class="col-sm-8">
+        {{range .Tracks}}<span class="badge bg-secondary me-1">{{.}}</span>{{end}}
+    </dd>
+    {{end}}
+</dl>
+
+<!-- Protocol Links -->
+<div class="d-flex flex-wrap gap-2 mt-2">
+    {{if (ne .StreamWebRTC "")}}
+    <a class="btn btn-outline-primary btn-sm" href="{{.StreamWebRTC}}/?muted=false&autoplay=true" target="_blank">WebRTC Stream</a>
+    {{end}}
+    {{if (ne .StreamHls "")}}
+    <a class="btn btn-outline-primary btn-sm" href="{{.StreamHls}}/?muted=false&autoplay=true" target="_blank">HLS Stream</a>
+    {{end}}
+    {{if (ne .StreamRtmp "")}}
+    <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('{{.StreamRtmp}}')">Copy RTMP URL</button>
+    {{end}}
+    {{if (ne .StreamRtsp "")}}
+    <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('{{.StreamRtsp}}')">Copy RTSP URL</button>
+    {{end}}
+</div>

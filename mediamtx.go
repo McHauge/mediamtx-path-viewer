@@ -197,3 +197,29 @@ func sortPaths(paths []Path) []Path {
 	})
 	return paths
 }
+
+// groupPaths takes a sorted list of paths and groups them by their PathName
+func groupPaths(paths []Path) []PathGroup {
+	groupMap := make(map[string][]Path)
+	var groupOrder []string
+
+	for _, p := range paths {
+		name := p.PathName
+		if name == "" {
+			name = "Streams"
+		}
+		if _, exists := groupMap[name]; !exists {
+			groupOrder = append(groupOrder, name)
+		}
+		groupMap[name] = append(groupMap[name], p)
+	}
+
+	groups := make([]PathGroup, 0, len(groupOrder))
+	for _, name := range groupOrder {
+		groups = append(groups, PathGroup{
+			GroupName: name,
+			Paths:     groupMap[name],
+		})
+	}
+	return groups
+}

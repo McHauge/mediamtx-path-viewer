@@ -9,6 +9,13 @@ type HTMLdata struct {
 	ItemCount int    `json:"itemCount"`
 	PageCount int    `json:"pageCount"`
 	Items     []Path `json:"items"`
+	Groups    []PathGroup
+	Version   string
+}
+
+type PathGroup struct {
+	GroupName string
+	Paths     []Path
 }
 
 type MediaMTX struct {

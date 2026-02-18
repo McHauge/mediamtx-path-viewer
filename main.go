@@ -93,17 +93,27 @@ func main() {
 }
 
 func setupRoutes(router *http.ServeMux, client *http.Client) {
-	// Load the index.html template
+	// Load the HTML templates
 	indexHTML, err := res.ReadFile("static/html_templates/index.html")
 	log.Should(err)
 
 	pathsHTML, err := res.ReadFile("static/html_templates/path_list.html")
 	log.Should(err)
 
+	detailHTML, err := res.ReadFile("static/html_templates/stream_detail.html")
+	log.Should(err)
+
+	// Version string for display
+	versionStr := gitTag
+	if versionStr == "" {
+		versionStr = gitRevision
+	}
+
 	router.HandleFunc(basePath+"/", func(w http.ResponseWriter, r *http.Request) {
 		htmlData := HTMLdata{
 			BaseURL:   basePath,
-			PageTitle: "MediaMTX Viewer",
+			PageTitle: "MediaMTX Path Viewer",
+			Version:   versionStr,
 		}
 
 		temp := template.Must(template.New("index").Parse(string(indexHTML)))
@@ -113,7 +123,7 @@ func setupRoutes(router *http.ServeMux, client *http.Client) {
 
 	// Update the view count for a path
 	router.HandleFunc(basePath+"/viewCount/{id}", func(w http.ResponseWriter, r *http.Request) {
-		log.Infof("HTMX received: viewCount %s %s", r.PathValue("id"), r.Header.Get("HX-Request"))
+		// log.Infof("HTMX received: viewCount %s %s", r.PathValue("id"), r.Header.Get("HX-Request"))
 
 		ID := r.PathValue("id")
 		ID = strings.ReplaceAll(ID, "-", "/")
@@ -169,10 +179,41 @@ func setupRoutes(router *http.ServeMux, client *http.Client) {
 			ItemCount: MediaMTX_Data.ItemCount,
 			PageCount: MediaMTX_Data.PageCount,
 			Items:     MediaMTX_Data.Items,
+			Groups:    groupPaths(MediaMTX_Data.Items),
 		}
 		// Load the server paths template
 		temp := template.Must(template.New("serverPaths").Parse(string(pathsHTML)))
 		err = temp.Execute(w, htmlData)
+		log.Should(err)
+	})
+
+	// Stream detail for modal view
+	router.HandleFunc(basePath+"/stream-detail/{id}", func(w http.ResponseWriter, r *http.Request) {
+		log.Infof("HTMX received: stream-detail %s %s", r.PathValue("id"), r.Header.Get("HX-Request"))
+
+		ID := r.PathValue("id")
+		ID = strings.ReplaceAll(ID, "-", "/")
+
+		MediaMTX_Data, err := getMediamtxPath(client, ID)
+		if err != nil {
+			log.Errorf("Error getting path from MediaMTX: %s", err)
+			http.Error(w, "Error getting path from MediaMTX", http.StatusInternalServerError)
+			return
+		}
+
+		// Add BaseURL for template use
+		type detailData struct {
+			Path
+			BaseURL string
+		}
+
+		data := detailData{
+			Path:    MediaMTX_Data,
+			BaseURL: basePath,
+		}
+
+		temp := template.Must(template.New("streamDetail").Parse(string(detailHTML)))
+		err = temp.Execute(w, data)
 		log.Should(err)
 	})
 
@@ -194,6 +235,11 @@ func serveStatic(router *http.ServeMux) {
 		log.Should(err)
 		http.ServeContent(w, r, "bootstrap_5_3_3.min.css", time.Now(), bytes.NewReader(file))
 	})
+	router.HandleFunc(basePath+"/static/css/custom.css", func(w http.ResponseWriter, r *http.Request) {
+		file, err := res.ReadFile("static/css/custom.css")
+		log.Should(err)
+		http.ServeContent(w, r, "custom.css", time.Now(), bytes.NewReader(file))
+	})
 	router.HandleFunc(basePath+"/static/js/htmx.min.js", func(w http.ResponseWriter, r *http.Request) {
 		file, err := res.ReadFile("static/js/htmx.min.js")
 		log.Should(err)
@@ -203,6 +249,11 @@ func serveStatic(router *http.ServeMux) {
 		file, err := res.ReadFile("static/js/hls.js")
 		log.Should(err)
 		http.ServeContent(w, r, "hls.js", time.Now(), bytes.NewReader(file))
+	})
+	router.HandleFunc(basePath+"/static/js/bootstrap.bundle.min.js", func(w http.ResponseWriter, r *http.Request) {
+		file, err := res.ReadFile("static/js/bootstrap.bundle.min.js")
+		log.Should(err)
+		http.ServeContent(w, r, "bootstrap.bundle.min.js", time.Now(), bytes.NewReader(file))
 	})
 }
 

@@ -1,9 +1,12 @@
-<!-- HWCs Form based on info from device -->
+<!-- Stream count OOB update for navbar badge -->
+<span id="stream-count" hx-swap-oob="true">{{.ItemCount}} Streams</span>
+
 <script>
     function setupPlayer(videoId, streamUrl) {
         const video = document.getElementById(videoId);
-        video.muted = true; // Mute autoplay for browsers that require it
-        video.setAttribute("playsinline", ""); // Ensure proper playback on iOS
+        if (!video) return;
+        video.muted = true;
+        video.setAttribute("playsinline", "");
         if (Hls.isSupported()) {
             const hls = new Hls();
             hls.loadSource(streamUrl);
@@ -19,89 +22,127 @@
         }
     }
 
-    function sendToClipBoard(text) {
+    function copyToClipboard(text) {
+        var copyFn;
         if (window.isSecureContext && navigator.clipboard) {
-            navigator.clipboard.writeText(text);
+            copyFn = navigator.clipboard.writeText(text);
         } else {
-            unsecuredCopyToClipboard(text);
+            // Fallback for non-HTTPS
+            var textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try { document.execCommand('copy'); } catch (e) {}
+            document.body.removeChild(textArea);
+            copyFn = Promise.resolve();
         }
+
+        // Show toast notification
+        var toastHTML = '<div class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">' +
+            '<div class="d-flex"><div class="toast-body">Copied to clipboard</div>' +
+            '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div></div>';
+        var container = document.getElementById('toastContainer');
+        container.insertAdjacentHTML('beforeend', toastHTML);
+        var toastEl = container.lastElementChild;
+        var toast = new bootstrap.Toast(toastEl, { delay: 2000 });
+        toast.show();
+        toastEl.addEventListener('hidden.bs.toast', function() { toastEl.remove(); });
     }
 
-    // If not over HTTPS, use this function instead
-    function unsecuredCopyToClipboard(text) {
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        try {
-            document.execCommand('copy');
-        } catch (err) {
-            console.error('Unable to copy to clipboard', err);
+    // Check auto-refresh state before HTMX polling fires
+    document.body.addEventListener('htmx:trigger', function(event) {
+        var autoRefresh = document.body.getAttribute('data-auto-refresh');
+        if (autoRefresh === 'false' && event.detail.elt && event.detail.elt.hasAttribute('data-auto-poll')) {
+            event.preventDefault();
         }
-        document.body.removeChild(textArea);
-    }
+    });
 </script>
-<form>
-    <div class="mb-0">
-        <ul class="list-group fs-5">
-            {{range .Items}}
-            <div class="card mb-3">
-                <div class="card-header mb-0">
-                    {{if (eq .PathName "")}}
-                    <h4 class="card-title mb-0">{{.PrettyName}}</h4>
-                    {{else}}
-                    <h4 class="card-title mb-0">{{.PathName}} - {{.PrettyName}}</h4>
-                    {{end}}
-                </div>
-                <div class="card-body mb-0 p-0">
-                    <div class="d-flex flex-row flex-wrap">
+
+{{if .Groups}}
+    {{range .Groups}}
+    <div class="stream-group">
+        <div class="stream-group-header" data-bs-toggle="collapse" data-bs-target="#group-{{.GroupName}}" aria-expanded="true">
+            <h5>
+                <span class="collapse-icon">&#9660;</span>
+                {{.GroupName}}
+                <span class="badge bg-secondary">{{len .Paths}}</span>
+            </h5>
+        </div>
+        <div class="collapse show" id="group-{{.GroupName}}">
+            <div class="row g-3">
+                {{range .Paths}}
+                <div class="col-12 col-md-6 col-lg-4 col-xxl-3">
+                    <div class="card stream-card h-100">
+                        <!-- Video Player -->
                         {{if (eq .Ready true)}}
                             {{if (eq .Source.Type "webRTCSession")}}
-                            <div class="p-2" style="width: min(640px, 100%)">
-                                <iframe style="width: 100%; height: auto; aspect-ratio: 16/9;" src="{{.StreamUrl}}" scrolling="no" frameborder="0" allowfullscreen></iframe>
+                            <div class="video-container">
+                                <iframe src="{{.StreamUrl}}" scrolling="no" allowfullscreen></iframe>
                             </div>
                             {{else}}
-                            <div class="p-2" style="width: min(640px, 100%)">
-                                <video id="{{.ID}}" style="width: 100%; height: auto; aspect-ratio: 16/9;" controls scrolling="no" frameborder="0" allowfullscreen></video>
+                            <div class="video-container">
+                                <video id="{{.ID}}" controls></video>
                             </div>
                             <script>setupPlayer('{{.ID}}', '{{.StreamUrl}}/index.m3u8');</script>
                             {{end}}
+                        {{else}}
+                        <div class="video-container d-flex align-items-center justify-content-center">
+                            <span class="text-muted">Stream not ready</span>
+                        </div>
                         {{end}}
-                        <div class="p-2">
-                            {{if (eq .Source.Type "")}}
-                            {{else}}
-                            <p class="card-text fs-6 mb-0">Source: {{.Source.Type}}</p>
-                            {{end}}
-                            <p class="card-text fs-6 mb-0">Start Time: {{.ReadyTimeStr}}</p>
-                            <div hx-get="{{$.BaseURL}}/viewCount/{{.ID}}" hx-trigger="every 5s" hx-target="#viewCount_{{.ID}}">
-                                <p class="card-text fs-6 mb-0" id="viewCount_{{.ID}}">Viewers: {{.TotalReaders}}</p>
+
+                        <!-- Stream Info (clickable to open modal) -->
+                        <div class="card-body py-2 px-3"
+                             hx-get="{{$.BaseURL}}/stream-detail/{{.ID}}"
+                             hx-target="#streamDetailContent"
+                             hx-swap="innerHTML"
+                             title="Click for details">
+                            <div class="stream-info">
+                                <p class="stream-name mb-0">{{.PrettyName}}</p>
+                                <div class="stream-meta">
+                                    {{if (ne .Source.Type "")}}
+                                    <span class="badge bg-info badge-source">{{.Source.Type}}</span>
+                                    {{end}}
+                                    <span hx-get="{{$.BaseURL}}/viewCount/{{.ID}}" hx-trigger="every 5s" hx-target="#viewCount_{{.ID}}" data-auto-poll>
+                                        <span id="viewCount_{{.ID}}">{{.TotalReaders}}</span>
+                                    </span>
+                                </div>
                             </div>
-                            <p class="card-text fs-6 mb-0">Tracks:</p>
-                            {{range .Tracks}}
-                            <p class="card-text fs-6 mb-0">  {{.}}</p>
-                            {{end}}
+                        </div>
+
+                        <!-- Protocol Links -->
+                        <div class="card-footer py-1 px-3">
+                            <div class="protocol-links">
+                                {{if (ne .StreamWebRTC "")}}
+                                <a class="btn btn-outline-primary btn-sm" href="{{.StreamWebRTC}}/?muted=false&autoplay=true" target="_blank" title="Open WebRTC stream">WebRTC</a>
+                                {{end}}
+                                {{if (ne .StreamHls "")}}
+                                <a class="btn btn-outline-primary btn-sm" href="{{.StreamHls}}/?muted=false&autoplay=true" target="_blank" title="Open HLS stream">HLS</a>
+                                {{end}}
+                                {{if (ne .StreamRtmp "")}}
+                                <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('{{.StreamRtmp}}')" title="Copy RTMP URL">RTMP</button>
+                                {{end}}
+                                {{if (ne .StreamRtsp "")}}
+                                <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('{{.StreamRtsp}}')" title="Copy RTSP URL">RTSP</button>
+                                {{end}}
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="card-footer mb-0">
-                    <div class="d-grid gap-2 d-md-block">
-                        {{if (ne .StreamWebRTC "")}}
-                        <a class="btn btn-secondary btn-sm px-2" href="{{.StreamWebRTC}}/?muted=false&autoplay=true">WebRTC Stream Link</a>
-                        {{end}}
-                        {{if (ne .StreamHls "")}}
-                        <a class="btn btn-secondary btn-sm px-2" href="{{.StreamHls}}/?muted=false&autoplay=true">HLS Stream Link</a>
-                        {{end}}
-                        {{if (ne .StreamRtmp "")}}
-                        <a class="btn btn-secondary btn-sm px-2" onpointerdown="sendToClipBoard('{{.StreamRtmp}}')" onpointerup="alert('Copied link to clipboard: {{.StreamRtmp}}')">RTMP Stream Link</a>
-                        {{end}}
-                        {{if (ne .StreamRtsp "")}}
-                        <a class="btn btn-secondary btn-sm px-2" onpointerdown="sendToClipBoard('{{.StreamRtsp}}')" onpointerup="alert('Copied link to clipboard: {{.StreamRtsp}}')">RTSP Stream Link</a>
-                        {{end}}
-                    </div>
-                </div>
+                {{end}}
             </div>
-            {{end}}
-        </ul>
+        </div>
     </div>
-</form>
+    {{end}}
+{{else}}
+    <div class="empty-state">
+        <h4>No Active Streams</h4>
+        <p>There are no active streams or paths on the MediaMTX server.</p>
+        <button class="btn btn-outline-secondary btn-sm"
+                hx-get="{{.BaseURL}}/connect-to-server/"
+                hx-target="#server-paths">
+            Try Again
+        </button>
+    </div>
+{{end}}

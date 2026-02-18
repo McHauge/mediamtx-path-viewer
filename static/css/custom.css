@@ -1,0 +1,187 @@
+/* MediaMTX Path Viewer v2.0.0 - Custom Styles */
+
+/* Base */
+body {
+    background-color: #121212;
+    padding-top: 56px; /* Fixed navbar offset */
+}
+
+/* Navbar */
+.navbar {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.navbar .badge {
+    font-size: 0.75rem;
+    vertical-align: middle;
+}
+
+/* Stream Group Sections */
+.stream-group {
+    margin-bottom: 1.5rem;
+}
+
+.stream-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+}
+
+.stream-group-header h5 {
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.stream-group-header .collapse-icon {
+    transition: transform 0.2s ease;
+}
+
+.stream-group-header.collapsed .collapse-icon {
+    transform: rotate(-90deg);
+}
+
+/* Stream Cards */
+.stream-card {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
+}
+
+.stream-card:hover {
+    border-color: rgba(13, 110, 253, 0.5);
+    box-shadow: 0 0 12px rgba(13, 110, 253, 0.15);
+}
+
+.stream-card .card-body {
+    cursor: pointer;
+}
+
+/* Video Container */
+.video-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background-color: #000;
+    overflow: hidden;
+}
+
+.video-container video,
+.video-container iframe {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border: none;
+}
+
+/* Compact stream info below video */
+.stream-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.stream-info .stream-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0;
+}
+
+.stream-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+}
+
+/* Source type badges */
+.badge-source {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background-color: #1a6985 !important;
+    color: #fff !important;
+    font-weight: 700;
+}
+
+/* Protocol link buttons */
+.protocol-links {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.protocol-links .btn {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+}
+
+/* Modal */
+#streamDetailModal .modal-content {
+    background-color: #1e1e1e;
+}
+
+#streamDetailModal .video-container {
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+}
+
+.detail-meta dt {
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+.detail-meta dd {
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Loading State */
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 1rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 4rem 1rem;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.empty-state h4 {
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 0.5rem;
+}
+
+/* Toast overrides */
+.toast-container {
+    z-index: 1090;
+}
+
+/* Footer */
+.app-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1rem 0;
+    margin-top: 2rem;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+/* Auto-refresh toggle */
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
