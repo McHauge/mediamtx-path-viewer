@@ -96,32 +96,65 @@ Releases are automated via GitHub Actions. Push a git tag to trigger GoReleaser,
 | `APP_PORT` | `8080` | Web server listen port |
 | `APP_PATH` | _(empty)_ | URL base path prefix (e.g., `/monitor`) |
 
+## MediaMTX Control API Reference
+
+**Docs:** https://mediamtx.org/docs/references/control-api
+**OpenAPI spec:** https://github.com/bluenviron/mediamtx/blob/main/api/openapi.yaml
+**Current version at time of writing:** v1.16.1
+
+All endpoints are paginated via `?page=N&itemsPerPage=N` where applicable.
+
+### Currently Used Endpoints
+- `GET /v3/paths/list` — All active paths (paginated)
+- `GET /v3/paths/get/{name}` — Single path details (source, ready, tracks, readers, byte counters)
+
+### Available but Unused Endpoints
+
+| Group | Endpoints | Key Data Available |
+|-------|-----------|-------------------|
+| **Server Info** | `GET /v3/info` | Version, startup time |
+| **Global Config** | `GET /v3/config/global/get`, `PATCH .../patch` | Full server configuration |
+| **Path Config** | `GET/POST/PATCH/DELETE /v3/config/paths/...` | Path configuration CRUD |
+| **HLS Muxers** | `GET /v3/hlsmuxers/list`, `GET .../get/{name}` | Path, created, lastRequest, bytesSent |
+| **RTSP Connections** | `GET /v3/rtspconns/list`, `GET .../get/{id}` | remoteAddr, session, tunnel, bytes |
+| **RTSP Sessions** | `GET /v3/rtspsessions/list`, `GET .../get/{id}`, `POST .../kick/{id}` | State, path, transport, RTP/RTCP metrics |
+| **RTSPS** | Same pattern as RTSP (`/v3/rtspsconns/...`, `/v3/rtspssessions/...`) | TLS variant |
+| **RTMP Connections** | `GET /v3/rtmpconns/list`, `GET .../get/{id}`, `POST .../kick/{id}` | State, path, query, bytes |
+| **RTMPS** | Same pattern as RTMP (`/v3/rtmpsconns/...`) | TLS variant |
+| **SRT Connections** | `GET /v3/srtconns/list`, `GET .../get/{id}`, `POST .../kick/{id}` | Packets, bytes, latency, RTT, bandwidth |
+| **WebRTC Sessions** | `GET /v3/webrtcsessions/list`, `GET .../get/{id}`, `POST .../kick/{id}` | State, candidates, RTP metrics |
+| **Recordings** | `GET /v3/recordings/list`, `GET .../get/{name}`, `DELETE .../deletesegment` | Segments with start times |
+
 ## Source Code Guide
 
 ### main.go
 - `main()` — Loads env, parses flags, creates HTTP client, sets up routes, starts server
-- `setupRoutes()` — Registers three endpoints:
-  - `GET /` — Serves the index page
-  - `GET /connect-to-server/` — HTMX endpoint returning rendered stream list
+- `setupRoutes()` — Registers endpoints:
+  - `GET /` — Serves the index page (navbar, modal, toast containers)
+  - `GET /connect-to-server/` — HTMX endpoint returning grouped stream grid
   - `GET /viewCount/{id}` — HTMX endpoint returning updated viewer count
+  - `GET /stream-detail/{id}` — HTMX endpoint returning modal content for stream detail
 - `serveStatic()` — Serves embedded CSS, JS, and icon files
 - `getEnv()` — Loads `.env` file and reads all environment variables with defaults/validation
 
 ### main_types.go
-- `HTMLdata` — Template rendering context
+- `HTMLdata` — Template rendering context (includes `Groups`, `Version`)
+- `PathGroup` — Group of paths sharing the same PathName prefix
 - `MediaMTX` — API response wrapper (paginated)
 - `Path` — Stream path with source info, tracks, readers, and generated fields (URLs, display names)
 - `Session` — Reader/source session (type + id)
 
 ### mediamtx.go
-- `getMediamtxPaths()` — Fetches paginated path list from `/v3/paths/list/`
+- `getMediamtxPaths()` — Fetches paginated path list from `/v3/paths/list`
 - `getMediamtxPath()` — Fetches single path from `/v3/paths/get/{path}`
 - `formatPathData()` — Enriches path with stream URLs, PrettyName, PathName, HTML-safe ID
 - `sortPaths()` — Sorts paths hierarchically (by root path, then name)
+- `groupPaths()` — Groups sorted paths by PathName into `[]PathGroup`
 
 ### HTML Templates (static/html_templates/)
-- `index.html` — Page shell; triggers HTMX load of stream list on page load
-- `path_list.html` — Renders stream cards with video players, metadata, protocol links, and auto-updating viewer counts (5s interval via HTMX)
+- `index.html` — Page shell with navbar, Bootstrap modal/toast containers, footer
+- `path_list.html` — Grouped responsive grid of stream cards with video players, badges, protocol links, empty state, and auto-updating viewer counts (5s HTMX polling)
+- `stream_detail.html` — Modal content with large video player, metadata, and protocol links
 
 ## Code Conventions
 

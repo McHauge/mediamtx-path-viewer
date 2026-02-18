@@ -1,0 +1,91 @@
+<!-- Recording count OOB update for navbar badge -->
+<span id="recording-count" hx-swap-oob="true">{{.ItemCount}} Recordings</span>
+
+<script>
+    function copyToClipboard(text) {
+        var copyFn;
+        if (window.isSecureContext && navigator.clipboard) {
+            copyFn = navigator.clipboard.writeText(text);
+        } else {
+            var textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try { document.execCommand('copy'); } catch (e) {}
+            document.body.removeChild(textArea);
+            copyFn = Promise.resolve();
+        }
+
+        var toastHTML = '<div class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">' +
+            '<div class="d-flex"><div class="toast-body">Copied to clipboard</div>' +
+            '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div></div>';
+        var container = document.getElementById('toastContainer');
+        container.insertAdjacentHTML('beforeend', toastHTML);
+        var toastEl = container.lastElementChild;
+        var toast = new bootstrap.Toast(toastEl, { delay: 2000 });
+        toast.show();
+        toastEl.addEventListener('hidden.bs.toast', function() { toastEl.remove(); });
+    }
+</script>
+
+{{if .Groups}}
+    {{range .Groups}}
+    <div class="stream-group">
+        <div class="stream-group-header" data-bs-toggle="collapse" data-bs-target="#recgroup-{{.GroupName}}" aria-expanded="true">
+            <h5>
+                <span class="collapse-icon">&#9660;</span>
+                {{.GroupName}}
+                <span class="badge bg-secondary">{{len .Recordings}}</span>
+            </h5>
+        </div>
+        <div class="collapse show" id="recgroup-{{.GroupName}}">
+            <div class="row g-3">
+                {{range .Recordings}}
+                <div class="col-12 col-md-6 col-lg-4 col-xxl-3">
+                    <div class="card recording-card h-100"
+                         hx-get="{{$.BaseURL}}/recording-detail/{{.ID}}"
+                         hx-target="#recordingDetailContent"
+                         hx-swap="innerHTML"
+                         title="Click for details">
+                        <!-- Recording Icon -->
+                        <div class="recording-card-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
+                                <circle cx="8" cy="8" r="3"/>
+                                <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8"/>
+                                <path d="M8 3.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9M2.5 8a5.5 5.5 0 1 1 11 0 5.5 5.5 0 0 1-11 0"/>
+                            </svg>
+                        </div>
+
+                        <!-- Recording Info -->
+                        <div class="card-body py-2 px-3">
+                            <div class="stream-info">
+                                <p class="stream-name mb-0">{{.PrettyName}}</p>
+                                <div class="stream-meta">
+                                    <span class="badge bg-secondary">{{.SegmentCount}} segments</span>
+                                </div>
+                            </div>
+                            {{if (ne .NewestSegment "")}}
+                            <div class="recording-timestamps mt-1">
+                                <small class="text-muted">Latest: {{.NewestSegment}}</small>
+                            </div>
+                            {{end}}
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </div>
+    {{end}}
+{{else}}
+    <div class="empty-state">
+        <h4>No Recordings Found</h4>
+        <p>There are no recordings on the MediaMTX server.</p>
+        <button class="btn btn-outline-secondary btn-sm"
+                hx-get="{{.BaseURL}}/recordings-list/"
+                hx-target="#recording-paths">
+            Try Again
+        </button>
+    </div>
+{{end}}

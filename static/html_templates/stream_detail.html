@@ -1,5 +1,5 @@
 <!-- Modal title OOB update -->
-<h5 class="modal-title" id="streamDetailModalLabel" hx-swap-oob="true">{{if (ne .PathName "")}}{{.PathName}} / {{end}}{{.PrettyName}}</h5>
+<h5 class="modal-title" id="streamDetailModalLabel" hx-swap-oob="true">{{if .IsRecording}}<span class="recording-indicator" title="Recording">&#9679;</span> {{end}}{{if (ne .PathName "")}}{{.PathName}} / {{end}}{{.PrettyName}}</h5>
 
 <!-- Video Player -->
 {{if (eq .Ready true)}}
@@ -41,6 +41,11 @@
     <dt class="col-sm-4">Source</dt>
     <dd class="col-sm-8"><span class="badge bg-info badge-source">{{.Source.Type}}</span></dd>
     {{end}}
+
+    <dt class="col-sm-4">Recording</dt>
+    <dd class="col-sm-8">
+        {{if .IsRecording}}<span class="recording-indicator">&#9679;</span> Active{{else}}<span class="text-muted">Not recording</span>{{end}}
+    </dd>
 
     <dt class="col-sm-4">Viewers</dt>
     <dd class="col-sm-8">

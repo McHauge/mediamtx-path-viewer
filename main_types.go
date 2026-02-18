@@ -35,8 +35,9 @@ type Path struct {
 	Tracks     []string  `json:"tracks"`
 	Readers    []Session `json:"readers"`
 
-	// Added internaly
+	// Added internally
 	ID           string `json:"id,omitempty"`
+	IsRecording  bool
 	ReadyTimeStr string `json:"readyTimeStr,omitempty"`
 	TotalReaders int    `json:"totalReaders,omitempty"`
 	StreamUrl    string `json:"streamUrl,omitempty"`
@@ -49,4 +50,62 @@ type Path struct {
 type Session struct {
 	Type string `json:"type"`
 	Id   string `json:"id"`
+}
+
+// Recording types
+
+type RecordingList struct {
+	ItemCount int         `json:"itemCount"`
+	PageCount int         `json:"pageCount"`
+	Items     []Recording `json:"items"`
+}
+
+type Recording struct {
+	Name     string    `json:"name"`
+	Segments []Segment `json:"segments"`
+	// Derived fields
+	ID            string
+	PrettyName    string
+	PathName      string
+	SegmentCount  int
+	OldestSegment string
+	NewestSegment string
+}
+
+type Segment struct {
+	Start time.Time `json:"start"`
+}
+
+type PlaybackSegment struct {
+	Start    time.Time `json:"start"`
+	Duration float64   `json:"duration"`
+	Url      string    `json:"url"`
+	// Derived
+	StartStr    string
+	DurationStr string
+	StartRFC    string
+}
+
+type RecordingGroup struct {
+	GroupName  string
+	Recordings []Recording
+}
+
+type RecordingsHTMLdata struct {
+	BaseURL     string
+	Error       string
+	PageTitle   string
+	ItemCount   int
+	PageCount   int
+	Items       []Recording
+	Groups      []RecordingGroup
+	Version     string
+	PlaybackURL string
+}
+
+type RecordingDetailData struct {
+	Recording
+	BaseURL     string
+	PlaybackURL string
+	Segments    []PlaybackSegment
 }

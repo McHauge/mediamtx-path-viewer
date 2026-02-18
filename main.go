@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"embed"
 	"flag"
 	"fmt"
@@ -37,10 +38,11 @@ var (
 	MEDIAMTX_USERNAME string
 	MEDIAMTX_PASSWORD string
 
-	MEDIAMTX_WEBRTC_URL string
-	MEDIAMTX_HLS_URL    string
-	MEDIAMTX_RTMP_URL   string
-	MEDIAMTX_RTSP_URL   string
+	MEDIAMTX_WEBRTC_URL   string
+	MEDIAMTX_HLS_URL      string
+	MEDIAMTX_RTMP_URL     string
+	MEDIAMTX_RTSP_URL     string
+	MEDIAMTX_PLAYBACK_URL string
 
 	// Default values
 	basePath = ""     // Default to /monitor
@@ -79,10 +81,18 @@ func main() {
 		Timeout: 5 * time.Second,
 	}
 
+	// Playback client tolerates self-signed certificates (internal MediaMTX service)
+	playbackClient := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
 	// Tipp: Potentially use the chi router here if you want to work nicer than the build in http tooling
 	// Start the application
 	var router http.ServeMux
-	setupRoutes(&router, client)
+	setupRoutes(&router, client, playbackClient)
 
 	log.Info("Starting MediaMTX Path Viewer")
 	log.Infof("Listening on port %s, via link: http://localhost:%s%s", port, port, basePath)
@@ -92,7 +102,7 @@ func main() {
 	}
 }
 
-func setupRoutes(router *http.ServeMux, client *http.Client) {
+func setupRoutes(router *http.ServeMux, client *http.Client, playbackClient *http.Client) {
 	// Load the HTML templates
 	indexHTML, err := res.ReadFile("static/html_templates/index.html")
 	log.Should(err)
@@ -101,6 +111,15 @@ func setupRoutes(router *http.ServeMux, client *http.Client) {
 	log.Should(err)
 
 	detailHTML, err := res.ReadFile("static/html_templates/stream_detail.html")
+	log.Should(err)
+
+	recordingsPageHTML, err := res.ReadFile("static/html_templates/recordings.html")
+	log.Should(err)
+
+	recordingsListHTML, err := res.ReadFile("static/html_templates/recordings_list.html")
+	log.Should(err)
+
+	recordingDetailHTML, err := res.ReadFile("static/html_templates/recording_detail.html")
 	log.Should(err)
 
 	// Version string for display
@@ -157,7 +176,7 @@ func setupRoutes(router *http.ServeMux, client *http.Client) {
 
 	// Handle Connect to device request
 	router.HandleFunc(basePath+"/connect-to-server/", func(w http.ResponseWriter, r *http.Request) {
-		log.Infof("HTMX received: connect-to-server %s", r.Header.Get("HX-Request"))
+		log.Debugf("HTMX received: connect-to-server %s", r.Header.Get("HX-Request"))
 
 		// Redirect if not an htmx request
 		if r.Header.Get("HX-Request") != "true" {
@@ -171,6 +190,20 @@ func setupRoutes(router *http.ServeMux, client *http.Client) {
 			log.Errorf("Error getting paths from MediaMTX: %s", err)
 			http.Error(w, "Error getting paths from MediaMTX", http.StatusInternalServerError)
 			return
+		}
+
+		// Cross-reference with recordings to mark which streams are recording
+		recordings, recErr := getMediamtxRecordings(client, 0, 100)
+		if recErr == nil {
+			recSet := make(map[string]bool, len(recordings.Items))
+			for _, rec := range recordings.Items {
+				recSet[rec.Name] = true
+			}
+			for i, path := range MediaMTX_Data.Items {
+				if recSet[path.Name] {
+					MediaMTX_Data.Items[i].IsRecording = true
+				}
+			}
 		}
 
 		htmlData := HTMLdata{
@@ -189,7 +222,7 @@ func setupRoutes(router *http.ServeMux, client *http.Client) {
 
 	// Stream detail for modal view
 	router.HandleFunc(basePath+"/stream-detail/{id}", func(w http.ResponseWriter, r *http.Request) {
-		log.Infof("HTMX received: stream-detail %s %s", r.PathValue("id"), r.Header.Get("HX-Request"))
+		log.Debugf("HTMX received: stream-detail %s %s", r.PathValue("id"), r.Header.Get("HX-Request"))
 
 		ID := r.PathValue("id")
 		ID = strings.ReplaceAll(ID, "-", "/")
@@ -199,6 +232,17 @@ func setupRoutes(router *http.ServeMux, client *http.Client) {
 			log.Errorf("Error getting path from MediaMTX: %s", err)
 			http.Error(w, "Error getting path from MediaMTX", http.StatusInternalServerError)
 			return
+		}
+
+		// Check if this stream has recordings
+		recordings, recErr := getMediamtxRecordings(client, 0, 100)
+		if recErr == nil {
+			for _, rec := range recordings.Items {
+				if rec.Name == MediaMTX_Data.Name {
+					MediaMTX_Data.IsRecording = true
+					break
+				}
+			}
 		}
 
 		// Add BaseURL for template use
@@ -213,6 +257,101 @@ func setupRoutes(router *http.ServeMux, client *http.Client) {
 		}
 
 		temp := template.Must(template.New("streamDetail").Parse(string(detailHTML)))
+		err = temp.Execute(w, data)
+		log.Should(err)
+	})
+
+	// Recordings page
+	router.HandleFunc(basePath+"/recordings/", func(w http.ResponseWriter, r *http.Request) {
+		htmlData := RecordingsHTMLdata{
+			BaseURL:   basePath,
+			PageTitle: "Recordings - MediaMTX Path Viewer",
+			Version:   versionStr,
+		}
+
+		temp := template.Must(template.New("recordings").Parse(string(recordingsPageHTML)))
+		err = temp.Execute(w, htmlData)
+		log.Should(err)
+	})
+
+	// Recordings list HTMX endpoint
+	router.HandleFunc(basePath+"/recordings-list/", func(w http.ResponseWriter, r *http.Request) {
+		log.Debugf("HTMX received: recordings-list %s", r.Header.Get("HX-Request"))
+
+		if r.Header.Get("HX-Request") != "true" {
+			http.Redirect(w, r, basePath+"/recordings/", http.StatusSeeOther)
+			return
+		}
+
+		recordings, err := getMediamtxRecordings(client, 0, 100)
+		if err != nil {
+			log.Errorf("Error getting recordings from MediaMTX: %s", err)
+			http.Error(w, "Error getting recordings from MediaMTX", http.StatusInternalServerError)
+			return
+		}
+
+		htmlData := RecordingsHTMLdata{
+			BaseURL:     basePath,
+			PageTitle:   "Recordings",
+			ItemCount:   recordings.ItemCount,
+			PageCount:   recordings.PageCount,
+			Items:       recordings.Items,
+			Groups:      groupRecordings(recordings.Items),
+			PlaybackURL: MEDIAMTX_PLAYBACK_URL,
+		}
+
+		temp := template.Must(template.New("recordingsList").Parse(string(recordingsListHTML)))
+		err = temp.Execute(w, htmlData)
+		log.Should(err)
+	})
+
+	// Recording detail for modal view
+	router.HandleFunc(basePath+"/recording-detail/{id}", func(w http.ResponseWriter, r *http.Request) {
+		log.Debugf("HTMX received: recording-detail %s %s", r.PathValue("id"), r.Header.Get("HX-Request"))
+
+		ID := r.PathValue("id")
+		name := strings.ReplaceAll(ID, "-", "/")
+
+		// Find the recording from the list
+		recordings, err := getMediamtxRecordings(client, 0, 100)
+		if err != nil {
+			log.Errorf("Error getting recordings from MediaMTX: %s", err)
+			http.Error(w, "Error getting recordings from MediaMTX", http.StatusInternalServerError)
+			return
+		}
+
+		var recording Recording
+		found := false
+		for _, rec := range recordings.Items {
+			if rec.Name == name {
+				recording = rec
+				found = true
+				break
+			}
+		}
+		if !found {
+			http.Error(w, "Recording not found", http.StatusNotFound)
+			return
+		}
+
+		// Fetch playback segments if playback URL is configured
+		var segments []PlaybackSegment
+		if MEDIAMTX_PLAYBACK_URL != "" {
+			segments, err = getPlaybackSegments(playbackClient, name)
+			if err != nil {
+				log.Errorf("Error getting playback segments: %s", err)
+				// Continue without segments — still show metadata
+			}
+		}
+
+		data := RecordingDetailData{
+			Recording:   recording,
+			BaseURL:     basePath,
+			PlaybackURL: MEDIAMTX_PLAYBACK_URL,
+			Segments:    segments,
+		}
+
+		temp := template.Must(template.New("recordingDetail").Parse(string(recordingDetailHTML)))
 		err = temp.Execute(w, data)
 		log.Should(err)
 	})
@@ -274,6 +413,7 @@ func getEnv() {
 	MEDIAMTX_HLS_URL = os.Getenv("MEDIAMTX_HLS_URL")
 	MEDIAMTX_RTMP_URL = os.Getenv("MEDIAMTX_RTMP_URL")
 	MEDIAMTX_RTSP_URL = os.Getenv("MEDIAMTX_RTSP_URL")
+	MEDIAMTX_PLAYBACK_URL = os.Getenv("MEDIAMTX_PLAYBACK_URL")
 
 	APP_PORT := os.Getenv("APP_PORT")
 	if APP_PORT != "" {
@@ -299,6 +439,9 @@ func getEnv() {
 	}
 	if MEDIAMTX_USERNAME == "" || MEDIAMTX_PASSWORD == "" {
 		log.Infof("No MEDIAMTX_USERNAME or MEDIAMTX_PASSWORD defined, no authentication will be used")
+	}
+	if MEDIAMTX_PLAYBACK_URL != "" {
+		log.Infof("Playback server configured at %s", MEDIAMTX_PLAYBACK_URL)
 	}
 
 	// Force set the MediaMTX Host to http

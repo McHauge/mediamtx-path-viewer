@@ -1,0 +1,82 @@
+<!-- Modal title OOB update -->
+<h5 class="modal-title" id="recordingDetailModalLabel" hx-swap-oob="true">{{if (ne .PathName "")}}{{.PathName}} / {{end}}{{.PrettyName}}</h5>
+
+<!-- Video Player (hidden until segment selected) -->
+<div class="video-container d-none" id="recordingPlayer">
+    <video id="recordingVideo" controls></video>
+</div>
+
+<!-- Metadata -->
+<dl class="detail-meta row mt-3 mb-2">
+    <dt class="col-sm-4">Path</dt>
+    <dd class="col-sm-8"><code>{{.Name}}</code></dd>
+
+    <dt class="col-sm-4">Total Segments</dt>
+    <dd class="col-sm-8">{{.SegmentCount}}</dd>
+
+    {{if (ne .OldestSegment "")}}
+    <dt class="col-sm-4">Oldest</dt>
+    <dd class="col-sm-8">{{.OldestSegment}}</dd>
+    {{end}}
+
+    {{if (ne .NewestSegment "")}}
+    <dt class="col-sm-4">Newest</dt>
+    <dd class="col-sm-8">{{.NewestSegment}}</dd>
+    {{end}}
+</dl>
+
+<!-- Segment Table -->
+{{if .Segments}}
+<div class="table-responsive mt-3">
+    <table class="table table-dark table-striped table-hover table-sm">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Start Time</th>
+                <th>Duration</th>
+                {{if (ne .PlaybackURL "")}}
+                <th>Play</th>
+                {{end}}
+            </tr>
+        </thead>
+        <tbody>
+            {{range $i, $seg := .Segments}}
+            <tr>
+                <td>{{$i}}</td>
+                <td>{{$seg.StartStr}}</td>
+                <td>{{$seg.DurationStr}}</td>
+                {{if (ne $.PlaybackURL "")}}
+                <td>
+                    <button class="btn btn-outline-primary btn-sm"
+                            onclick="playSegment('{{$.PlaybackURL}}/get?path={{$.Name}}&start={{$seg.StartRFC}}&duration={{$seg.Duration}}&format=fmp4')">
+                        &#9654;
+                    </button>
+                </td>
+                {{end}}
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{else if (eq .PlaybackURL "")}}
+<div class="alert alert-info mt-3">
+    <strong>Playback not configured.</strong> Set the <code>MEDIAMTX_PLAYBACK_URL</code> environment variable to enable segment playback and detailed segment information.
+</div>
+{{else}}
+<div class="alert alert-secondary mt-3">
+    No segment details available from the playback server.
+</div>
+{{end}}
+
+<script>
+    function playSegment(url) {
+        var container = document.getElementById('recordingPlayer');
+        var video = document.getElementById('recordingVideo');
+        if (!video || !container) return;
+
+        container.classList.remove('d-none');
+        video.src = url;
+        video.play();
+        container.scrollIntoView({ behavior: 'smooth' });
+    }
+</script>

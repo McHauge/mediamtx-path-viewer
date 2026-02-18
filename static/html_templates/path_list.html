@@ -99,13 +99,15 @@
                              hx-swap="innerHTML"
                              title="Click for details">
                             <div class="stream-info">
-                                <p class="stream-name mb-0">{{.PrettyName}}</p>
+                                <p class="stream-name mb-0">
+                                    {{if .IsRecording}}<span class="recording-indicator" title="Recording">&#9679;</span> {{end}}{{.PrettyName}}
+                                </p>
                                 <div class="stream-meta">
                                     {{if (ne .Source.Type "")}}
                                     <span class="badge bg-info badge-source">{{.Source.Type}}</span>
                                     {{end}}
                                     <span hx-get="{{$.BaseURL}}/viewCount/{{.ID}}" hx-trigger="every 5s" hx-target="#viewCount_{{.ID}}" data-auto-poll>
-                                        <span id="viewCount_{{.ID}}">{{.TotalReaders}}</span>
+                                        <span id="viewCount_{{.ID}}">Viewers: {{.TotalReaders}}</span>
                                     </span>
                                 </div>
                             </div>
