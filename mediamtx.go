@@ -379,6 +379,244 @@ func groupRecordings(recordings []Recording) []RecordingGroup {
 	return groups
 }
 
+// Monitoring API functions
+
+func formatBytes(bytes uint64) string {
+	const (
+		KB = 1024
+		MB = KB * 1024
+		GB = MB * 1024
+	)
+	switch {
+	case bytes >= GB:
+		return fmt.Sprintf("%.1f GB", float64(bytes)/float64(GB))
+	case bytes >= MB:
+		return fmt.Sprintf("%.1f MB", float64(bytes)/float64(MB))
+	case bytes >= KB:
+		return fmt.Sprintf("%.1f KB", float64(bytes)/float64(KB))
+	default:
+		return fmt.Sprintf("%d B", bytes)
+	}
+}
+
+func mediamtxAPIRequest(client *http.Client, endpoint string, target interface{}) error {
+	host := MEDIAMTX_API_URL + ":" + MEDIAMTX_API_PORT
+	url := host + endpoint
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	if MEDIAMTX_USERNAME != "" || MEDIAMTX_PASSWORD != "" {
+		req.SetBasicAuth(MEDIAMTX_USERNAME, MEDIAMTX_PASSWORD)
+	}
+
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("MediaMTX API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(respBody, target)
+}
+
+func getMediamtxInfo(client *http.Client) (ServerInfo, error) {
+	data := ServerInfo{}
+	err := mediamtxAPIRequest(client, "/v3/info", &data)
+	if err != nil {
+		return data, err
+	}
+
+	started, parseErr := time.Parse(time.RFC3339Nano, data.Started)
+	if parseErr == nil {
+		uptime := time.Since(started)
+		days := int(uptime.Hours()) / 24
+		hours := int(uptime.Hours()) % 24
+		minutes := int(uptime.Minutes()) % 60
+		if days > 0 {
+			data.UptimeStr = fmt.Sprintf("%dd %dh %dm", days, hours, minutes)
+		} else if hours > 0 {
+			data.UptimeStr = fmt.Sprintf("%dh %dm", hours, minutes)
+		} else {
+			data.UptimeStr = fmt.Sprintf("%dm", minutes)
+		}
+	} else {
+		data.UptimeStr = "Unknown"
+	}
+
+	return data, nil
+}
+
+func getMediamtxHLSMuxers(client *http.Client, page, itemsPerPage int) (HLSMuxerList, error) {
+	data := HLSMuxerList{}
+	endpoint := fmt.Sprintf("/v3/hlsmuxers/list?page=%d&itemsPerPage=%d", page, itemsPerPage)
+	err := mediamtxAPIRequest(client, endpoint, &data)
+	if err != nil {
+		return data, err
+	}
+
+	for i, muxer := range data.Items {
+		data.Items[i].BytesSentStr = formatBytes(muxer.BytesSent)
+		if t, e := time.Parse(time.RFC3339Nano, muxer.Created); e == nil {
+			data.Items[i].CreatedStr = t.Format("2006-01-02 15:04:05")
+		}
+		if t, e := time.Parse(time.RFC3339Nano, muxer.LastRequest); e == nil {
+			data.Items[i].LastRequestStr = t.Format("2006-01-02 15:04:05")
+		}
+	}
+
+	return data, nil
+}
+
+func getMediamtxRTSPSessions(client *http.Client, page, itemsPerPage int) (RTSPSessionList, error) {
+	data := RTSPSessionList{}
+	endpoint := fmt.Sprintf("/v3/rtspsessions/list?page=%d&itemsPerPage=%d", page, itemsPerPage)
+	err := mediamtxAPIRequest(client, endpoint, &data)
+	if err != nil {
+		return data, err
+	}
+
+	for i, sess := range data.Items {
+		data.Items[i].BytesReceivedStr = formatBytes(sess.BytesReceived)
+		data.Items[i].BytesSentStr = formatBytes(sess.BytesSent)
+		data.Items[i].RTPPacketsJitterStr = fmt.Sprintf("%.2f ms", sess.RTPPacketsJitter)
+	}
+
+	return data, nil
+}
+
+func getMediamtxRTMPConns(client *http.Client, page, itemsPerPage int) (RTMPConnList, error) {
+	data := RTMPConnList{}
+	endpoint := fmt.Sprintf("/v3/rtmpconns/list?page=%d&itemsPerPage=%d", page, itemsPerPage)
+	err := mediamtxAPIRequest(client, endpoint, &data)
+	if err != nil {
+		return data, err
+	}
+
+	for i, conn := range data.Items {
+		data.Items[i].BytesReceivedStr = formatBytes(conn.BytesReceived)
+		data.Items[i].BytesSentStr = formatBytes(conn.BytesSent)
+	}
+
+	return data, nil
+}
+
+func getMediamtxSRTConns(client *http.Client, page, itemsPerPage int) (SRTConnList, error) {
+	data := SRTConnList{}
+	endpoint := fmt.Sprintf("/v3/srtconns/list?page=%d&itemsPerPage=%d", page, itemsPerPage)
+	err := mediamtxAPIRequest(client, endpoint, &data)
+	if err != nil {
+		return data, err
+	}
+
+	for i, conn := range data.Items {
+		data.Items[i].BytesReceivedStr = formatBytes(conn.BytesReceived)
+		data.Items[i].BytesSentStr = formatBytes(conn.BytesSent)
+	}
+
+	return data, nil
+}
+
+func getMediamtxWebRTCSessions(client *http.Client, page, itemsPerPage int) (WebRTCSessionList, error) {
+	data := WebRTCSessionList{}
+	endpoint := fmt.Sprintf("/v3/webrtcsessions/list?page=%d&itemsPerPage=%d", page, itemsPerPage)
+	err := mediamtxAPIRequest(client, endpoint, &data)
+	if err != nil {
+		return data, err
+	}
+
+	for i, sess := range data.Items {
+		data.Items[i].BytesReceivedStr = formatBytes(sess.BytesReceived)
+		data.Items[i].BytesSentStr = formatBytes(sess.BytesSent)
+		data.Items[i].RTPPacketsJitterStr = fmt.Sprintf("%.2f ms", sess.RTPPacketsJitter)
+	}
+
+	return data, nil
+}
+
+func buildStreamSummaries(
+	paths []Path,
+	webrtcSessions []WebRTCSession,
+	rtspSessions []RTSPSession,
+	rtmpConns []RTMPConn,
+	hlsMuxers []HLSMuxer,
+	srtConns []SRTConn,
+) []StreamSummary {
+	summaryMap := make(map[string]*StreamSummary)
+	var order []string
+
+	for _, p := range paths {
+		s := &StreamSummary{
+			Name:       p.Name,
+			SourceType: p.Source.Type,
+			Tracks:     p.Tracks,
+		}
+		summaryMap[p.Name] = s
+		order = append(order, p.Name)
+	}
+
+	for _, sess := range webrtcSessions {
+		if s, ok := summaryMap[sess.Path]; ok {
+			if sess.State == "read" {
+				s.WebRTCViewers++
+			}
+			s.TotalBytes += sess.BytesReceived + sess.BytesSent
+		}
+	}
+	for _, sess := range rtspSessions {
+		if s, ok := summaryMap[sess.Path]; ok {
+			if sess.State == "read" {
+				s.RTSPViewers++
+			}
+			s.TotalBytes += sess.BytesReceived + sess.BytesSent
+		}
+	}
+	for _, conn := range rtmpConns {
+		if s, ok := summaryMap[conn.Path]; ok {
+			if conn.State == "read" {
+				s.RTMPViewers++
+			}
+			s.TotalBytes += conn.BytesReceived + conn.BytesSent
+		}
+	}
+	for _, muxer := range hlsMuxers {
+		if s, ok := summaryMap[muxer.Path]; ok {
+			s.HLSViewers++
+			s.TotalBytes += muxer.BytesSent
+		}
+	}
+	for _, conn := range srtConns {
+		if s, ok := summaryMap[conn.Path]; ok {
+			if conn.State == "read" {
+				s.SRTViewers++
+			}
+			s.TotalBytes += conn.BytesReceived + conn.BytesSent
+		}
+	}
+
+	result := make([]StreamSummary, 0, len(order))
+	for _, name := range order {
+		s := summaryMap[name]
+		s.TotalViewers = s.WebRTCViewers + s.RTSPViewers + s.RTMPViewers + s.HLSViewers + s.SRTViewers
+		s.BandwidthStr = formatBytes(s.TotalBytes)
+		result = append(result, *s)
+	}
+	return result
+}
+
 // groupPaths takes a sorted list of paths and groups them by their PathName
 func groupPaths(paths []Path) []PathGroup {
 	groupMap := make(map[string][]Path)

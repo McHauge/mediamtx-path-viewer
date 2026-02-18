@@ -245,3 +245,40 @@ body {
 .navbar .btn-light {
     pointer-events: none;
 }
+
+/* Monitoring Dashboard */
+.monitoring-stat-card {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: border-color 0.2s ease;
+}
+
+.monitoring-stat-card:hover {
+    border-color: rgba(13, 110, 253, 0.3);
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 0.25rem;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.monitoring-table {
+    font-size: 0.82rem;
+}
+
+.monitoring-table code {
+    font-size: 0.8rem;
+    color: #e0e0e0;
+}
+
+.monitoring-table .badge {
+    font-size: 0.7rem;
+}

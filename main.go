@@ -122,6 +122,12 @@ func setupRoutes(router *http.ServeMux, client *http.Client, playbackClient *htt
 	recordingDetailHTML, err := res.ReadFile("static/html_templates/recording_detail.html")
 	log.Should(err)
 
+	monitoringPageHTML, err := res.ReadFile("static/html_templates/monitoring.html")
+	log.Should(err)
+
+	monitoringListHTML, err := res.ReadFile("static/html_templates/monitoring_list.html")
+	log.Should(err)
+
 	// Version string for display
 	versionStr := gitTag
 	if versionStr == "" {
@@ -353,6 +359,107 @@ func setupRoutes(router *http.ServeMux, client *http.Client, playbackClient *htt
 
 		temp := template.Must(template.New("recordingDetail").Parse(string(recordingDetailHTML)))
 		err = temp.Execute(w, data)
+		log.Should(err)
+	})
+
+	// Monitoring page
+	router.HandleFunc(basePath+"/monitoring/", func(w http.ResponseWriter, r *http.Request) {
+		htmlData := MonitoringHTMLdata{
+			BaseURL:   basePath,
+			PageTitle: "Monitoring - MediaMTX Path Viewer",
+			Version:   versionStr,
+		}
+
+		temp := template.Must(template.New("monitoring").Parse(string(monitoringPageHTML)))
+		err = temp.Execute(w, htmlData)
+		log.Should(err)
+	})
+
+	// Monitoring list HTMX endpoint
+	router.HandleFunc(basePath+"/monitoring-list/", func(w http.ResponseWriter, r *http.Request) {
+		log.Debugf("HTMX received: monitoring-list %s", r.Header.Get("HX-Request"))
+
+		if r.Header.Get("HX-Request") != "true" {
+			http.Redirect(w, r, basePath+"/monitoring/", http.StatusSeeOther)
+			return
+		}
+
+		// Fetch all monitoring data (errors are non-fatal; partial data is OK)
+		serverInfo, infoErr := getMediamtxInfo(client)
+		if infoErr != nil {
+			log.Errorf("Error getting server info: %s", infoErr)
+		}
+
+		paths, pathErr := getMediamtxPaths(client, 0, 100)
+		if pathErr != nil {
+			log.Errorf("Error getting paths: %s", pathErr)
+		}
+
+		webrtcSessions, webrtcErr := getMediamtxWebRTCSessions(client, 0, 100)
+		if webrtcErr != nil {
+			log.Errorf("Error getting WebRTC sessions: %s", webrtcErr)
+		}
+
+		rtspSessions, rtspErr := getMediamtxRTSPSessions(client, 0, 100)
+		if rtspErr != nil {
+			log.Errorf("Error getting RTSP sessions: %s", rtspErr)
+		}
+
+		rtmpConns, rtmpErr := getMediamtxRTMPConns(client, 0, 100)
+		if rtmpErr != nil {
+			log.Errorf("Error getting RTMP connections: %s", rtmpErr)
+		}
+
+		hlsMuxers, hlsErr := getMediamtxHLSMuxers(client, 0, 100)
+		if hlsErr != nil {
+			log.Errorf("Error getting HLS muxers: %s", hlsErr)
+		}
+
+		srtConns, srtErr := getMediamtxSRTConns(client, 0, 100)
+		if srtErr != nil {
+			log.Errorf("Error getting SRT connections: %s", srtErr)
+		}
+
+		// Build per-stream summaries
+		summaries := buildStreamSummaries(
+			paths.Items,
+			webrtcSessions.Items,
+			rtspSessions.Items,
+			rtmpConns.Items,
+			hlsMuxers.Items,
+			srtConns.Items,
+		)
+
+		// Calculate totals
+		var totalViewers int
+		var totalBytes uint64
+		for _, s := range summaries {
+			totalViewers += s.TotalViewers
+			totalBytes += s.TotalBytes
+		}
+
+		htmlData := MonitoringHTMLdata{
+			BaseURL:           basePath,
+			PageTitle:         "Monitoring",
+			ServerInfo:        serverInfo,
+			TotalStreams:      paths.ItemCount,
+			TotalViewers:      totalViewers,
+			TotalBandwidthStr: formatBytes(totalBytes),
+			WebRTCCount:       webrtcSessions.ItemCount,
+			RTSPCount:         rtspSessions.ItemCount,
+			RTMPCount:         rtmpConns.ItemCount,
+			HLSCount:          hlsMuxers.ItemCount,
+			SRTCount:          srtConns.ItemCount,
+			StreamSummaries:   summaries,
+			WebRTCSessions:    webrtcSessions.Items,
+			RTSPSessions:      rtspSessions.Items,
+			RTMPConns:         rtmpConns.Items,
+			HLSMuxers:         hlsMuxers.Items,
+			SRTConns:          srtConns.Items,
+		}
+
+		temp := template.Must(template.New("monitoringList").Parse(string(monitoringListHTML)))
+		err = temp.Execute(w, htmlData)
 		log.Should(err)
 	})
 

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head>
-    <title>MediaMTX Path Viewer</title>
+    <title>Monitoring - MediaMTX Path Viewer</title>
     <link rel="icon" href="{{.BaseURL}}/static/pictures/icon.png" type="image/x-icon">
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -9,10 +9,9 @@
     <link rel="stylesheet" href="{{.BaseURL}}/static/css/bootstrap_5_3_3.min.css">
     <link rel="stylesheet" href="{{.BaseURL}}/static/css/custom.css">
     <script src="{{.BaseURL}}/static/js/htmx.min.js"></script>
-    <script src="{{.BaseURL}}/static/js/hls.js"></script>
     <script src="{{.BaseURL}}/static/js/bootstrap.bundle.min.js"></script>
 </head>
-<body hx-trigger="load" hx-get="{{.BaseURL}}/connect-to-server/" hx-target="#server-paths">
+<body hx-trigger="load" hx-get="{{.BaseURL}}/monitoring-list/" hx-target="#monitoring-content">
 
     <!-- Navbar -->
     <nav class="navbar navbar-dark bg-dark fixed-top navbar-expand">
@@ -22,17 +21,17 @@
                 MediaMTX Path Viewer
             </a>
             <div class="d-flex align-items-center gap-3">
-                <a class="btn btn-light btn-sm" href="{{.BaseURL}}/">Streams</a>
+                <a class="btn btn-outline-light btn-sm" href="{{.BaseURL}}/">Streams</a>
                 <a class="btn btn-outline-light btn-sm" href="{{.BaseURL}}/recordings/">Recordings</a>
-                <a class="btn btn-outline-light btn-sm" href="{{.BaseURL}}/monitoring/">Monitoring</a>
-                <span class="badge bg-secondary" id="stream-count">-</span>
-                <div class="form-check form-switch mb-0" title="Auto-refresh stream list">
+                <a class="btn btn-light btn-sm" href="{{.BaseURL}}/monitoring/">Monitoring</a>
+                <span class="badge bg-secondary" id="monitoring-status">-</span>
+                <div class="form-check form-switch mb-0" title="Auto-refresh monitoring data">
                     <input class="form-check-input" type="checkbox" id="autoRefreshToggle" checked>
                     <label class="form-check-label text-light small" for="autoRefreshToggle">Auto</label>
                 </div>
                 <button type="button" class="btn btn-outline-light btn-sm"
-                        hx-get="{{.BaseURL}}/connect-to-server/"
-                        hx-target="#server-paths">
+                        hx-get="{{.BaseURL}}/monitoring-list/"
+                        hx-target="#monitoring-content">
                     Refresh
                 </button>
             </div>
@@ -41,32 +40,13 @@
 
     <!-- Main Content -->
     <div class="container-fluid py-3">
-        <div id="server-paths">
+        <div id="monitoring-content">
             <!-- Loading state (replaced by HTMX) -->
             <div class="loading-state">
                 <div class="spinner-border text-secondary mb-3" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
-                <p>Connecting to MediaMTX server...</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stream Detail Modal -->
-    <div class="modal fade" id="streamDetailModal" tabindex="-1" aria-labelledby="streamDetailModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="streamDetailModalLabel">Stream Detail</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body" id="streamDetailContent">
-                    <div class="loading-state">
-                        <div class="spinner-border text-secondary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
-                </div>
+                <p>Loading monitoring data...</p>
             </div>
         </div>
     </div>
@@ -82,22 +62,17 @@
     </footer>
 
     <script>
-        // Show modal when HTMX loads stream detail content
-        document.body.addEventListener('htmx:afterSwap', function(event) {
-            if (event.detail.target.id === 'streamDetailContent') {
-                var modal = new bootstrap.Modal(document.getElementById('streamDetailModal'));
-                modal.show();
-            }
-        });
-
-        // Clean up video players when modal is closed
-        document.getElementById('streamDetailModal').addEventListener('hidden.bs.modal', function () {
-            document.getElementById('streamDetailContent').innerHTML = '';
-        });
-
         // Auto-refresh toggle
         document.getElementById('autoRefreshToggle').addEventListener('change', function() {
             document.body.setAttribute('data-auto-refresh', this.checked ? 'true' : 'false');
+        });
+
+        // Check auto-refresh state before HTMX polling fires
+        document.body.addEventListener('htmx:trigger', function(event) {
+            var autoRefresh = document.body.getAttribute('data-auto-refresh');
+            if (autoRefresh === 'false' && event.detail.elt && event.detail.elt.hasAttribute('data-auto-poll')) {
+                event.preventDefault();
+            }
         });
     </script>
 

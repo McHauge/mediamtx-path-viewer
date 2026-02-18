@@ -1,0 +1,357 @@
+<!-- Monitoring status OOB update for navbar badge -->
+<span id="monitoring-status" hx-swap-oob="true">{{if .ServerInfo.Version}}{{.ServerInfo.Version}}{{else}}Offline{{end}}</span>
+
+<!-- Self-refreshing wrapper for auto-poll -->
+<div hx-get="{{.BaseURL}}/monitoring-list/" hx-trigger="every 10s" hx-target="#monitoring-content" hx-swap="innerHTML" data-auto-poll>
+
+<!-- System Overview -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card monitoring-stat-card">
+            <div class="card-body text-center">
+                <div class="stat-label">Server Version</div>
+                <div class="stat-value">{{if .ServerInfo.Version}}{{.ServerInfo.Version}}{{else}}<span class="text-muted">N/A</span>{{end}}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card monitoring-stat-card">
+            <div class="card-body text-center">
+                <div class="stat-label">Uptime</div>
+                <div class="stat-value">{{if .ServerInfo.UptimeStr}}{{.ServerInfo.UptimeStr}}{{else}}<span class="text-muted">N/A</span>{{end}}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card monitoring-stat-card">
+            <div class="card-body text-center">
+                <div class="stat-label">Active Streams</div>
+                <div class="stat-value">{{.TotalStreams}}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card monitoring-stat-card">
+            <div class="card-body text-center">
+                <div class="stat-label">Total Viewers</div>
+                <div class="stat-value">{{.TotalViewers}}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Protocol Counts & Bandwidth -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg">
+        <div class="card monitoring-stat-card">
+            <div class="card-body text-center">
+                <div class="stat-label">WebRTC</div>
+                <div class="stat-value">{{.WebRTCCount}}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card monitoring-stat-card">
+            <div class="card-body text-center">
+                <div class="stat-label">RTSP</div>
+                <div class="stat-value">{{.RTSPCount}}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card monitoring-stat-card">
+            <div class="card-body text-center">
+                <div class="stat-label">RTMP</div>
+                <div class="stat-value">{{.RTMPCount}}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card monitoring-stat-card">
+            <div class="card-body text-center">
+                <div class="stat-label">HLS</div>
+                <div class="stat-value">{{.HLSCount}}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card monitoring-stat-card">
+            <div class="card-body text-center">
+                <div class="stat-label">SRT</div>
+                <div class="stat-value">{{.SRTCount}}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card monitoring-stat-card">
+            <div class="card-body text-center">
+                <div class="stat-label">Total Bandwidth</div>
+                <div class="stat-value">{{.TotalBandwidthStr}}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Per-Stream Summary -->
+<div class="stream-group mb-4">
+    <div class="stream-group-header" data-bs-toggle="collapse" data-bs-target="#perStreamSummary" aria-expanded="true">
+        <h5>
+            <span class="collapse-icon">&#9660;</span>
+            Per-Stream Summary
+            <span class="badge bg-secondary">{{len .StreamSummaries}}</span>
+        </h5>
+    </div>
+    <div class="collapse show" id="perStreamSummary">
+        {{if .StreamSummaries}}
+        <div class="table-responsive">
+            <table class="table table-dark table-striped table-hover table-sm monitoring-table">
+                <thead>
+                    <tr>
+                        <th>Stream</th>
+                        <th>Source</th>
+                        <th>Codecs</th>
+                        <th>WebRTC</th>
+                        <th>RTSP</th>
+                        <th>RTMP</th>
+                        <th>HLS</th>
+                        <th>SRT</th>
+                        <th>Total</th>
+                        <th>Bandwidth</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .StreamSummaries}}
+                    <tr>
+                        <td><code>{{.Name}}</code></td>
+                        <td>{{if .SourceType}}<span class="badge bg-info badge-source">{{.SourceType}}</span>{{else}}<span class="text-muted">-</span>{{end}}</td>
+                        <td>{{range .Tracks}}<span class="badge bg-secondary me-1">{{.}}</span>{{end}}</td>
+                        <td>{{.WebRTCViewers}}</td>
+                        <td>{{.RTSPViewers}}</td>
+                        <td>{{.RTMPViewers}}</td>
+                        <td>{{.HLSViewers}}</td>
+                        <td>{{.SRTViewers}}</td>
+                        <td><strong>{{.TotalViewers}}</strong></td>
+                        <td>{{.BandwidthStr}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+        {{else}}
+        <p class="text-muted px-2">No active streams.</p>
+        {{end}}
+    </div>
+</div>
+
+<!-- WebRTC Sessions -->
+<div class="stream-group mb-4">
+    <div class="stream-group-header" data-bs-toggle="collapse" data-bs-target="#webrtcTable" aria-expanded="true">
+        <h5>
+            <span class="collapse-icon">&#9660;</span>
+            WebRTC Sessions
+            <span class="badge bg-secondary">{{len .WebRTCSessions}}</span>
+        </h5>
+    </div>
+    <div class="collapse show" id="webrtcTable">
+        {{if .WebRTCSessions}}
+        <div class="table-responsive">
+            <table class="table table-dark table-striped table-hover table-sm monitoring-table">
+                <thead>
+                    <tr>
+                        <th>Remote Address</th>
+                        <th>State</th>
+                        <th>Path</th>
+                        <th>Received</th>
+                        <th>Sent</th>
+                        <th>RTP Lost</th>
+                        <th>Jitter</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .WebRTCSessions}}
+                    <tr>
+                        <td>{{.RemoteAddr}}</td>
+                        <td><span class="badge {{if eq .State "read"}}bg-success{{else if eq .State "publish"}}bg-warning{{else}}bg-secondary{{end}}">{{.State}}</span></td>
+                        <td><code>{{.Path}}</code></td>
+                        <td>{{.BytesReceivedStr}}</td>
+                        <td>{{.BytesSentStr}}</td>
+                        <td>{{.RTPPacketsLost}}</td>
+                        <td>{{.RTPPacketsJitterStr}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+        {{else}}
+        <p class="text-muted px-2">No active WebRTC sessions.</p>
+        {{end}}
+    </div>
+</div>
+
+<!-- RTSP Sessions -->
+<div class="stream-group mb-4">
+    <div class="stream-group-header" data-bs-toggle="collapse" data-bs-target="#rtspTable" aria-expanded="true">
+        <h5>
+            <span class="collapse-icon">&#9660;</span>
+            RTSP Sessions
+            <span class="badge bg-secondary">{{len .RTSPSessions}}</span>
+        </h5>
+    </div>
+    <div class="collapse show" id="rtspTable">
+        {{if .RTSPSessions}}
+        <div class="table-responsive">
+            <table class="table table-dark table-striped table-hover table-sm monitoring-table">
+                <thead>
+                    <tr>
+                        <th>Remote Address</th>
+                        <th>State</th>
+                        <th>Path</th>
+                        <th>Transport</th>
+                        <th>Received</th>
+                        <th>Sent</th>
+                        <th>RTP Packets</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .RTSPSessions}}
+                    <tr>
+                        <td>{{.RemoteAddr}}</td>
+                        <td><span class="badge {{if eq .State "read"}}bg-success{{else if eq .State "publish"}}bg-warning{{else}}bg-secondary{{end}}">{{.State}}</span></td>
+                        <td><code>{{.Path}}</code></td>
+                        <td>{{if .Transport}}{{.Transport}}{{else}}<span class="text-muted">-</span>{{end}}</td>
+                        <td>{{.BytesReceivedStr}}</td>
+                        <td>{{.BytesSentStr}}</td>
+                        <td>{{.RTPPacketsReceived}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+        {{else}}
+        <p class="text-muted px-2">No active RTSP sessions.</p>
+        {{end}}
+    </div>
+</div>
+
+<!-- RTMP Connections -->
+<div class="stream-group mb-4">
+    <div class="stream-group-header" data-bs-toggle="collapse" data-bs-target="#rtmpTable" aria-expanded="true">
+        <h5>
+            <span class="collapse-icon">&#9660;</span>
+            RTMP Connections
+            <span class="badge bg-secondary">{{len .RTMPConns}}</span>
+        </h5>
+    </div>
+    <div class="collapse show" id="rtmpTable">
+        {{if .RTMPConns}}
+        <div class="table-responsive">
+            <table class="table table-dark table-striped table-hover table-sm monitoring-table">
+                <thead>
+                    <tr>
+                        <th>Remote Address</th>
+                        <th>State</th>
+                        <th>Path</th>
+                        <th>Received</th>
+                        <th>Sent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .RTMPConns}}
+                    <tr>
+                        <td>{{.RemoteAddr}}</td>
+                        <td><span class="badge {{if eq .State "read"}}bg-success{{else if eq .State "publish"}}bg-warning{{else}}bg-secondary{{end}}">{{.State}}</span></td>
+                        <td><code>{{.Path}}</code></td>
+                        <td>{{.BytesReceivedStr}}</td>
+                        <td>{{.BytesSentStr}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+        {{else}}
+        <p class="text-muted px-2">No active RTMP connections.</p>
+        {{end}}
+    </div>
+</div>
+
+<!-- HLS Muxers -->
+<div class="stream-group mb-4">
+    <div class="stream-group-header" data-bs-toggle="collapse" data-bs-target="#hlsTable" aria-expanded="true">
+        <h5>
+            <span class="collapse-icon">&#9660;</span>
+            HLS Muxers
+            <span class="badge bg-secondary">{{len .HLSMuxers}}</span>
+        </h5>
+    </div>
+    <div class="collapse show" id="hlsTable">
+        {{if .HLSMuxers}}
+        <div class="table-responsive">
+            <table class="table table-dark table-striped table-hover table-sm monitoring-table">
+                <thead>
+                    <tr>
+                        <th>Path</th>
+                        <th>Created</th>
+                        <th>Last Request</th>
+                        <th>Bytes Sent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .HLSMuxers}}
+                    <tr>
+                        <td><code>{{.Path}}</code></td>
+                        <td>{{.CreatedStr}}</td>
+                        <td>{{.LastRequestStr}}</td>
+                        <td>{{.BytesSentStr}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+        {{else}}
+        <p class="text-muted px-2">No active HLS muxers.</p>
+        {{end}}
+    </div>
+</div>
+
+<!-- SRT Connections -->
+<div class="stream-group mb-4">
+    <div class="stream-group-header" data-bs-toggle="collapse" data-bs-target="#srtTable" aria-expanded="true">
+        <h5>
+            <span class="collapse-icon">&#9660;</span>
+            SRT Connections
+            <span class="badge bg-secondary">{{len .SRTConns}}</span>
+        </h5>
+    </div>
+    <div class="collapse show" id="srtTable">
+        {{if .SRTConns}}
+        <div class="table-responsive">
+            <table class="table table-dark table-striped table-hover table-sm monitoring-table">
+                <thead>
+                    <tr>
+                        <th>Remote Address</th>
+                        <th>State</th>
+                        <th>Path</th>
+                        <th>Received</th>
+                        <th>Sent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .SRTConns}}
+                    <tr>
+                        <td>{{.RemoteAddr}}</td>
+                        <td><span class="badge {{if eq .State "read"}}bg-success{{else if eq .State "publish"}}bg-warning{{else}}bg-secondary{{end}}">{{.State}}</span></td>
+                        <td><code>{{.Path}}</code></td>
+                        <td>{{.BytesReceivedStr}}</td>
+                        <td>{{.BytesSentStr}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+        {{else}}
+        <p class="text-muted px-2">No active SRT connections.</p>
+        {{end}}
+    </div>
+</div>
+
+</div><!-- end auto-poll wrapper -->
