@@ -15,8 +15,6 @@ func getMediamtxPaths(client *http.Client, page, itemsPrePage int) (MediaMTX, er
 
 	host := MEDIAMTX_API_URL + ":" + MEDIAMTX_API_PORT
 	url := fmt.Sprintf("%s/v3/paths/list/?page=%d&itemsPerPage=%d", host, page, itemsPrePage)
-	// log.Warnf("Getting paths from %s", url)
-
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return data, err
@@ -36,7 +34,8 @@ func getMediamtxPaths(client *http.Client, page, itemsPrePage int) (MediaMTX, er
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return data, err
+		body, _ := io.ReadAll(resp.Body)
+		return data, fmt.Errorf("MediaMTX API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	respBody, err := io.ReadAll(resp.Body)
@@ -83,8 +82,6 @@ func getMediamtxPath(client *http.Client, path string) (Path, error) {
 
 	host := MEDIAMTX_API_URL + ":" + MEDIAMTX_API_PORT
 	url := fmt.Sprintf("%s/v3/paths/get/%s", host, path)
-	// log.Warnf("Getting paths from %s", url)
-
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return data, err
@@ -104,7 +101,8 @@ func getMediamtxPath(client *http.Client, path string) (Path, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return data, err
+		body, _ := io.ReadAll(resp.Body)
+		return data, fmt.Errorf("MediaMTX API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	respBody, err := io.ReadAll(resp.Body)
@@ -161,6 +159,9 @@ func formatPathData(path Path) Path {
 	// Pretty Name & Path
 	x := strings.Split(path.Name, "/")
 	for i := 0; i < len(x); i++ {
+		if len(x[i]) == 0 {
+			continue
+		}
 		x[i] = strings.ToUpper(string(x[i][0])) + x[i][1:] // only first letter upper case
 	}
 	if len(x) > 1 {
@@ -174,6 +175,9 @@ func formatPathData(path Path) Path {
 	if strings.Contains(path.PrettyName, "_") {
 		x := strings.Split(path.PrettyName, "_")
 		for i := 0; i < len(x); i++ {
+			if len(x[i]) == 0 {
+				continue
+			}
 			x[i] = strings.ToUpper(string(x[i][0])) + x[i][1:] // only first letter upper case
 		}
 		path.PrettyName = strings.Join(x, " ")
