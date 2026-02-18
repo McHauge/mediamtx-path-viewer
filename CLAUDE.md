@@ -6,7 +6,7 @@
 
 ## Tech Stack
 
-- **Backend:** Go 1.24 (standard library `net/http` router)
+- **Backend:** Go 1.26 (standard library `net/http` router)
 - **Frontend:** Go `html/template`, Bootstrap 5.3.3 (dark theme), HTMX 1.9.2, HLS.js
 - **Build:** Docker (Alpine), GoReleaser, npm scripts (dev tooling only)
 - **Dependencies:** Minimal — `godotenv` for env loading, `env_logger`/`logrus` for logging
@@ -24,7 +24,7 @@
 │   ├── js/                 # HTMX (minified), HLS.js
 │   ├── html_templates/     # Go HTML templates (index, path_list)
 │   └── pictures/           # Favicon
-├── dockerfile              # Docker image definition (golang:1.24-alpine)
+├── dockerfile              # Docker image definition (golang:1.26-alpine)
 ├── .goreleaser.yml         # Cross-platform release builds
 ├── .github/workflows/      # CI: release_build.yml (tag-triggered)
 ├── injectGitVars.sh        # Generates gitinfo.go with git metadata
@@ -43,7 +43,7 @@
 
 ### Prerequisites
 
-- Go 1.24+
+- Go 1.26+
 - Node.js/npm (for dev scripts only)
 - A running MediaMTX server (for functional testing)
 

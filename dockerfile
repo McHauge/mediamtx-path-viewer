@@ -1,5 +1,5 @@
 # Specifies a parent image
-FROM golang:1.24-alpine
+FROM golang:1.26-alpine
 
 LABEL version="v1.3.5"
 
