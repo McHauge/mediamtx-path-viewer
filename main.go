@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"embed"
-	_ "embed"
 	"flag"
 	"fmt"
 	"html/template"
@@ -114,7 +113,7 @@ func setupRoutes(router *http.ServeMux, client *http.Client) {
 
 	// Update the view count for a path
 	router.HandleFunc(basePath+"/viewCount/{id}", func(w http.ResponseWriter, r *http.Request) {
-		log.Warnln("HTMX recived: viewCount", r.PathValue("id"), r.Header.Get("HX-Request"))
+		log.Infof("HTMX received: viewCount %s %s", r.PathValue("id"), r.Header.Get("HX-Request"))
 
 		ID := r.PathValue("id")
 		ID = strings.ReplaceAll(ID, "-", "/")
@@ -127,7 +126,6 @@ func setupRoutes(router *http.ServeMux, client *http.Client) {
 			return
 		}
 
-		// log.Warn(log.Indent(MediaMTX_Data))
 		type viewers struct {
 			BaseURL      string
 			Error        string
@@ -149,7 +147,7 @@ func setupRoutes(router *http.ServeMux, client *http.Client) {
 
 	// Handle Connect to device request
 	router.HandleFunc(basePath+"/connect-to-server/", func(w http.ResponseWriter, r *http.Request) {
-		log.Warnln("HTMX recived: connect-to-server", r.Header.Get("HX-Request"))
+		log.Infof("HTMX received: connect-to-server %s", r.Header.Get("HX-Request"))
 
 		// Redirect if not an htmx request
 		if r.Header.Get("HX-Request") != "true" {
@@ -172,8 +170,6 @@ func setupRoutes(router *http.ServeMux, client *http.Client) {
 			PageCount: MediaMTX_Data.PageCount,
 			Items:     MediaMTX_Data.Items,
 		}
-		// log.Warn(log.Indent(MediaMTX_Data))
-
 		// Load the server paths template
 		temp := template.Must(template.New("serverPaths").Parse(string(pathsHTML)))
 		err = temp.Execute(w, htmlData)

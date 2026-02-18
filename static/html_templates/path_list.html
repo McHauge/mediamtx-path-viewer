@@ -1,4 +1,47 @@
 <!-- HWCs Form based on info from device -->
+<script>
+    function setupPlayer(videoId, streamUrl) {
+        const video = document.getElementById(videoId);
+        video.muted = true; // Mute autoplay for browsers that require it
+        video.setAttribute("playsinline", ""); // Ensure proper playback on iOS
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+            hls.loadSource(streamUrl);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                video.play();
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = streamUrl;
+            video.addEventListener('loadedmetadata', function() {
+                video.play();
+            });
+        }
+    }
+
+    function sendToClipBoard(text) {
+        if (window.isSecureContext && navigator.clipboard) {
+            navigator.clipboard.writeText(text);
+        } else {
+            unsecuredCopyToClipboard(text);
+        }
+    }
+
+    // If not over HTTPS, use this function instead
+    function unsecuredCopyToClipboard(text) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+        } catch (err) {
+            console.error('Unable to copy to clipboard', err);
+        }
+        document.body.removeChild(textArea);
+    }
+</script>
 <form>
     <div class="mb-0">
         <ul class="list-group fs-5">
@@ -19,31 +62,10 @@
                                 <iframe style="width: 100%; height: auto; aspect-ratio: 16/9;" src="{{.StreamUrl}}" scrolling="no" frameborder="0" allowfullscreen></iframe>
                             </div>
                             {{else}}
-                            <script>
-                                function setupPlayer(videoId, streamUrl) {
-                                    const video = document.getElementById(videoId);
-                                    video.muted = true; // Mute autoplay for browsers that require it
-                                    video.setAttribute("playsinline", ""); // Ensure proper playback on iOS
-                                    if (Hls.isSupported()) {
-                                        const hls = new Hls();
-                                        hls.loadSource(streamUrl);
-                                        hls.attachMedia(video);
-                                        hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                                            video.play();
-                                        });
-                                    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                                        video.src = streamUrl;
-                                        video.addEventListener('loadedmetadata', function() {
-                                            video.play();
-                                        });
-                                    }
-                                }
-                            
-                                setupPlayer('{{.Name}}', '{{.StreamUrl}}/index.m3u8');
-                            </script>
                             <div class="p-2" style="width: min(640px, 100%)">
-                                <video id="{{.Name}}" style="width: 100%; height: auto; aspect-ratio: 16/9;" controls scrolling="no" frameborder="0" allowfullscreen></video>
+                                <video id="{{.ID}}" style="width: 100%; height: auto; aspect-ratio: 16/9;" controls scrolling="no" frameborder="0" allowfullscreen></video>
                             </div>
+                            <script>setupPlayer('{{.ID}}', '{{.StreamUrl}}/index.m3u8');</script>
                             {{end}}
                         {{end}}
                         <div class="p-2">
@@ -60,33 +82,9 @@
                             <p class="card-text fs-6 mb-0">  {{.}}</p>
                             {{end}}
                         </div>
-                    </div> 
+                    </div>
                 </div>
                 <div class="card-footer mb-0">
-                    <script>
-                        function sendToClipBoard(text) {
-                            if (window.isSecureContext && navigator.clipboard) {
-                                navigator.clipboard.writeText(text);
-                            } else {
-                                unsecuredCopyToClipboard(text);
-                            }
-                        }
-
-                        // If not over HTTPS, use this function instead
-                        function unsecuredCopyToClipboard(text) {
-                            const textArea = document.createElement("textarea");
-                            textArea.value = text;
-                            document.body.appendChild(textArea);
-                            textArea.focus();
-                            textArea.select();
-                            try {
-                                document.execCommand('copy');
-                            } catch (err) {
-                                console.error('Unable to copy to clipboard', err);
-                            }
-                            document.body.removeChild(textArea);
-                        }
-                    </script>
                     <div class="d-grid gap-2 d-md-block">
                         {{if (ne .StreamWebRTC "")}}
                         <a class="btn btn-secondary btn-sm px-2" href="{{.StreamWebRTC}}/?muted=false&autoplay=true">WebRTC Stream Link</a>
