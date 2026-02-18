@@ -248,7 +248,7 @@ func getEnv() {
 
 	// Check if the MediaMTX Host is defined
 	if MEDIAMTX_API_URL == "" || MEDIAMTX_WEBRTC_URL == "" || MEDIAMTX_HLS_URL == "" {
-		log.Fatalf("No MediaMTX Host defined, please define the MEDIAMTX_HOST in the .env file")
+		log.Fatalf("Missing required environment variables: MEDIAMTX_API_URL, MEDIAMTX_WEBRTC_URL, and MEDIAMTX_HLS_URL must all be set")
 	}
 	if MEDIAMTX_USERNAME == "" || MEDIAMTX_PASSWORD == "" {
 		log.Infof("No MEDIAMTX_USERNAME or MEDIAMTX_PASSWORD defined, no authentication will be used")

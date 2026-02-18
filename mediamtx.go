@@ -36,7 +36,8 @@ func getMediamtxPaths(client *http.Client, page, itemsPrePage int) (MediaMTX, er
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return data, err
+		body, _ := io.ReadAll(resp.Body)
+		return data, fmt.Errorf("MediaMTX API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	respBody, err := io.ReadAll(resp.Body)
@@ -104,7 +105,8 @@ func getMediamtxPath(client *http.Client, path string) (Path, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return data, err
+		body, _ := io.ReadAll(resp.Body)
+		return data, fmt.Errorf("MediaMTX API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	respBody, err := io.ReadAll(resp.Body)
