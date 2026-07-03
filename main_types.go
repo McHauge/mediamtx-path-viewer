@@ -57,6 +57,7 @@ type Path struct {
 	StreamRtmp   string `json:"StreamRtmp,omitempty"`
 	StreamRtsp   string `json:"StreamRtsp,omitempty"`
 	StreamMoq    string `json:"StreamMoq,omitempty"`
+	StreamSrt    string `json:"StreamSrt,omitempty"`
 }
 
 // PathTrack is an item of the v1.19.2 tracks2 array.

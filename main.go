@@ -43,6 +43,7 @@ var (
 	MEDIAMTX_RTMP_URL     string
 	MEDIAMTX_RTSP_URL     string
 	MEDIAMTX_MOQ_URL      string
+	MEDIAMTX_SRT_URL      string
 	MEDIAMTX_PLAYBACK_URL string
 
 	// Default values
@@ -562,6 +563,7 @@ func getEnv() {
 	MEDIAMTX_RTMP_URL = os.Getenv("MEDIAMTX_RTMP_URL")
 	MEDIAMTX_RTSP_URL = os.Getenv("MEDIAMTX_RTSP_URL")
 	MEDIAMTX_MOQ_URL = os.Getenv("MEDIAMTX_MOQ_URL")
+	MEDIAMTX_SRT_URL = os.Getenv("MEDIAMTX_SRT_URL")
 	MEDIAMTX_PLAYBACK_URL = os.Getenv("MEDIAMTX_PLAYBACK_URL")
 
 	APP_PORT := os.Getenv("APP_PORT")

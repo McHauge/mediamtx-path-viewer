@@ -131,6 +131,9 @@
                                 {{if (ne .StreamRtsp "")}}
                                 <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('{{.StreamRtsp}}')" title="Copy RTSP URL">RTSP</button>
                                 {{end}}
+                                {{if (ne .StreamSrt "")}}
+                                <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('{{.StreamSrt}}')" title="Copy SRT URL">SRT</button>
+                                {{end}}
                             </div>
                         </div>
                     </div>

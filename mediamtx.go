@@ -154,6 +154,10 @@ func formatPathData(path Path) Path {
 	if MEDIAMTX_MOQ_URL != "" {
 		path.StreamMoq = fmt.Sprintf("%s/%s", MEDIAMTX_MOQ_URL, path.Name)
 	}
+	if MEDIAMTX_SRT_URL != "" {
+		// SRT uses a streamid query parameter instead of a URL path
+		path.StreamSrt = fmt.Sprintf("%s?streamid=read:%s", MEDIAMTX_SRT_URL, path.Name)
+	}
 
 	// Add the stream URL
 	if path.Source.Type == "webRTCSession" {
