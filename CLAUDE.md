@@ -93,6 +93,7 @@ Releases are automated via GitHub Actions. Push a git tag to trigger GoReleaser,
 | `MEDIAMTX_PASSWORD` | _(empty)_ | Basic auth password |
 | `MEDIAMTX_RTMP_URL` | _(empty)_ | RTMP stream base URL |
 | `MEDIAMTX_RTSP_URL` | _(empty)_ | RTSP stream base URL |
+| `MEDIAMTX_PLAYBACK_URL` | _(empty)_ | MediaMTX playback server base URL (enables recording segment playback) |
 | `APP_PORT` | `8080` | Web server listen port |
 | `APP_PATH` | _(empty)_ | URL base path prefix (e.g., `/monitor`) |
 
@@ -100,30 +101,38 @@ Releases are automated via GitHub Actions. Push a git tag to trigger GoReleaser,
 
 **Docs:** https://mediamtx.org/docs/references/control-api
 **OpenAPI spec:** https://github.com/bluenviron/mediamtx/blob/main/api/openapi.yaml
-**Current version at time of writing:** v1.16.1
+**Current version at time of writing:** v1.19.2
+
+> **v1.19.2 notes:** `Path` fields `ready`/`readyTime`/`tracks` and session `bytesReceived`/`bytesSent`/`rtpPackets*` are **deprecated** in favor of `available`/`online`/`availableTime`, `tracks2` (objects with `codec`/`codecProps`), and `inbound*`/`outbound*`. The deprecated aliases still populate, but the code reads the new `Path` fields (see `formatPathData`) and keeps the deprecated ones only as a fallback for older servers.
 
 All endpoints are paginated via `?page=N&itemsPerPage=N` where applicable.
 
 ### Currently Used Endpoints
 - `GET /v3/paths/list` — All active paths (paginated)
-- `GET /v3/paths/get/{name}` — Single path details (source, ready, tracks, readers, byte counters)
+- `GET /v3/paths/get/{name}` — Single path details (source, available/online, tracks2, readers, inboundFramesInError)
+- `GET /v3/info` — Server version + startup time (uptime)
+- `GET /v3/hlsmuxers/list` — HLS muxers (per-path bytesSent)
+- `GET /v3/hlssessions/list` — HLS reader sessions (remoteAddr, user, isCDN, outboundBytes) — per-viewer HLS + geo
+- `GET /v3/rtspsessions/list` + `GET /v3/rtspssessions/list` — RTSP + RTSPS (TLS) sessions
+- `GET /v3/rtmpconns/list` + `GET /v3/rtmpsconns/list` — RTMP + RTMPS (TLS) connections
+- `GET /v3/srtconns/list` — SRT connections (RTT, send/receive rate, link capacity, loss)
+- `GET /v3/webrtcsessions/list` — WebRTC sessions (candidates, RTP metrics)
+- `GET /v3/moqsessions/list` — Media-over-QUIC sessions (new in v1.19.0)
+- `GET /v3/recordings/list` — Recording segments (cross-referenced to mark recording paths)
+
+> **Note:** Kick endpoints (`POST .../kick/{id}`) are deliberately NOT exposed — the dashboard has no login, so proxying kick actions would let anyone with page access disconnect sessions. Revisit once the app has its own authentication.
 
 ### Available but Unused Endpoints
 
 | Group | Endpoints | Key Data Available |
 |-------|-----------|-------------------|
-| **Server Info** | `GET /v3/info` | Version, startup time |
 | **Global Config** | `GET /v3/config/global/get`, `PATCH .../patch` | Full server configuration |
 | **Path Config** | `GET/POST/PATCH/DELETE /v3/config/paths/...` | Path configuration CRUD |
-| **HLS Muxers** | `GET /v3/hlsmuxers/list`, `GET .../get/{name}` | Path, created, lastRequest, bytesSent |
-| **RTSP Connections** | `GET /v3/rtspconns/list`, `GET .../get/{id}` | remoteAddr, session, tunnel, bytes |
-| **RTSP Sessions** | `GET /v3/rtspsessions/list`, `GET .../get/{id}`, `POST .../kick/{id}` | State, path, transport, RTP/RTCP metrics |
-| **RTSPS** | Same pattern as RTSP (`/v3/rtspsconns/...`, `/v3/rtspssessions/...`) | TLS variant |
-| **RTMP Connections** | `GET /v3/rtmpconns/list`, `GET .../get/{id}`, `POST .../kick/{id}` | State, path, query, bytes |
-| **RTMPS** | Same pattern as RTMP (`/v3/rtmpsconns/...`) | TLS variant |
-| **SRT Connections** | `GET /v3/srtconns/list`, `GET .../get/{id}`, `POST .../kick/{id}` | Packets, bytes, latency, RTT, bandwidth |
-| **WebRTC Sessions** | `GET /v3/webrtcsessions/list`, `GET .../get/{id}`, `POST .../kick/{id}` | State, candidates, RTP metrics |
-| **Recordings** | `GET /v3/recordings/list`, `GET .../get/{name}`, `DELETE .../deletesegment` | Segments with start times |
+| **Path Defaults** | `GET /v3/config/pathdefaults/get`, `PATCH .../patch` | Default path config |
+| **RTSP Connections** | `GET /v3/rtspconns/list`, `GET .../get/{id}` | remoteAddr, session, tunnel, bytes (raw conns; sessions are used instead) |
+| **Single-item gets** | `GET /v3/{type}/get/{id}` for all session/conn types | Same data as list, one item |
+| **Kick** | `POST .../kick/{id}` for all session/conn types | Disconnect a session (see note above) |
+| **Recording detail** | `GET /v3/recordings/get/{name}`, `DELETE .../deletesegment` | Per-recording segments, segment deletion |
 
 ## Source Code Guide
 
@@ -134,6 +143,7 @@ All endpoints are paginated via `?page=N&itemsPerPage=N` where applicable.
   - `GET /connect-to-server/` — HTMX endpoint returning grouped stream grid
   - `GET /viewCount/{id}` — HTMX endpoint returning updated viewer count
   - `GET /stream-detail/{id}` — HTMX endpoint returning modal content for stream detail
+  - `GET /monitoring-list/` — HTMX endpoint aggregating info + paths + all session/conn types (incl. HLS sessions, MoQ, RTSPS/RTMPS), geo, and per-stream summaries
 - `serveStatic()` — Serves embedded CSS, JS, and icon files
 - `getEnv()` — Loads `.env` file and reads all environment variables with defaults/validation
 
@@ -147,9 +157,12 @@ All endpoints are paginated via `?page=N&itemsPerPage=N` where applicable.
 ### mediamtx.go
 - `getMediamtxPaths()` — Fetches paginated path list from `/v3/paths/list`
 - `getMediamtxPath()` — Fetches single path from `/v3/paths/get/{path}`
-- `formatPathData()` — Enriches path with stream URLs, PrettyName, PathName, HTML-safe ID
-- `sortPaths()` — Sorts paths hierarchically (by root path, then name)
-- `groupPaths()` — Groups sorted paths by PathName into `[]PathGroup`
+- `formatPathData()` — Enriches path with stream URLs, PrettyName, PathName, HTML-safe ID; derives `Ready`/`Tracks`/`ReadyTimeStr` from the v1.19.2 `available`/`tracks2`/`availableTime` fields (fallback to deprecated fields)
+- `sortPaths()` / `groupPaths()` — Sort/group paths hierarchically by PathName
+- `mediamtxAPIRequest()` — Shared GET helper (auth-aware)
+- `getMediamtxInfo/HLSMuxers/HLSSessions/RTSPSessions/RTSPSSessions/RTMPConns/RTMPSConns/SRTConns/WebRTCSessions/MoQSessions()` — Monitoring fetchers (list endpoints), each formatting derived display strings
+- `collectRemoteIPs()` / `lookupGeoIP()` / `applyGeoData()` — Batch GeoIP enrichment via ip-api.com (includes HLS + MoQ sessions)
+- `buildStreamSummaries()` — Per-path viewer/bandwidth aggregation across all protocols (HLS viewers from sessions, MoQ included)
 
 ### HTML Templates (static/html_templates/)
 - `index.html` — Page shell with navbar, Bootstrap modal/toast containers, footer

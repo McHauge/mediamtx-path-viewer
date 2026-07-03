@@ -65,6 +65,11 @@
         {{range .Tracks}}<span class="badge bg-secondary me-1">{{.}}</span>{{end}}
     </dd>
     {{end}}
+
+    {{if gt .InboundFramesInError 0}}
+    <dt class="col-sm-4">Frames in Error</dt>
+    <dd class="col-sm-8"><span class="badge bg-danger">{{.InboundFramesInError}}</span></dd>
+    {{end}}
 </dl>
 
 <!-- Protocol Links -->

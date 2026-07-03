@@ -52,22 +52,8 @@ func getMediamtxPaths(client *http.Client, page, itemsPrePage int) (MediaMTX, er
 		return data, err
 	}
 
-	// Add the ReadyTimeStr
 	for i, path := range data.Items {
-		path.ReadyTimeStr = ""
-
-		// If the ReadyTime is not set, skip it
-		if path.ReadyTime == (time.Time{}) {
-			continue
-		}
-		path.ReadyTimeStr = path.ReadyTime.Format("2006-01-02 15:04:05")
-		data.Items[i] = path
-	}
-
-	for i, path := range data.Items {
-		path.ID = strings.ReplaceAll(path.ConfName, "/", "-")
-
-		// Format the path data
+		// Format the path data (derives Ready/Tracks/ReadyTimeStr, stream URLs, names)
 		path = formatPathData(path)
 
 		// Add the total readers
@@ -119,15 +105,7 @@ func getMediamtxPath(client *http.Client, path string) (Path, error) {
 		return data, err
 	}
 
-	// Add the ReadyTimeStr
-	data.ReadyTimeStr = ""
-
-	// If the ReadyTime is not set, skip it
-	if data.ReadyTime != (time.Time{}) {
-		data.ReadyTimeStr = data.ReadyTime.Format("2006-01-02 15:04:05")
-	}
-
-	// Format the path data
+	// Format the path data (derives Ready/Tracks/ReadyTimeStr, stream URLs, names)
 	data = formatPathData(data)
 
 	// Add the total readers
@@ -138,6 +116,28 @@ func getMediamtxPath(client *http.Client, path string) (Path, error) {
 
 func formatPathData(path Path) Path {
 	path.ID = strings.ReplaceAll(path.Name, "/", "-")
+
+	// Derive readiness/tracks from v1.19.2 fields, falling back to the deprecated
+	// ready/readyTime/tracks fields for older MediaMTX servers.
+	path.Ready = path.Available || path.LegacyReady
+
+	readyTime := path.AvailableTime
+	if readyTime.IsZero() {
+		readyTime = path.LegacyReadyTime
+	}
+	path.ReadyTimeStr = ""
+	if !readyTime.IsZero() {
+		path.ReadyTimeStr = readyTime.Format("2006-01-02 15:04:05")
+	}
+
+	if len(path.Tracks2) > 0 {
+		path.Tracks = make([]string, 0, len(path.Tracks2))
+		for _, t := range path.Tracks2 {
+			path.Tracks = append(path.Tracks, t.Codec)
+		}
+	} else {
+		path.Tracks = path.LegacyTracks
+	}
 
 	if MEDIAMTX_WEBRTC_URL != "" {
 		path.StreamWebRTC = fmt.Sprintf("%s/%s", MEDIAMTX_WEBRTC_URL, path.Name)
@@ -489,6 +489,8 @@ func collectRemoteIPs(
 	rtspSessions []RTSPSession,
 	rtmpConns []RTMPConn,
 	srtConns []SRTConn,
+	hlsSessions []HLSSession,
+	moqSessions []MoQSession,
 ) []string {
 	seen := make(map[string]bool)
 	var ips []string
@@ -513,6 +515,12 @@ func collectRemoteIPs(
 	for _, c := range srtConns {
 		addIP(c.RemoteAddr)
 	}
+	for _, s := range hlsSessions {
+		addIP(s.RemoteAddr)
+	}
+	for _, s := range moqSessions {
+		addIP(s.RemoteAddr)
+	}
 
 	return ips
 }
@@ -524,6 +532,8 @@ func applyGeoData(
 	rtspSessions []RTSPSession,
 	rtmpConns []RTMPConn,
 	srtConns []SRTConn,
+	hlsSessions []HLSSession,
+	moqSessions []MoQSession,
 ) []CountrySummary {
 	countryCount := make(map[string]*CountrySummary)
 	var countryOrder []string
@@ -580,6 +590,25 @@ func applyGeoData(
 			srtConns[i].CountryCode = geo.CountryCode
 		}
 		if c.State == "read" {
+			addCountry(ip)
+		}
+	}
+	// HLS reader sessions are always viewers (no publish state).
+	for i, s := range hlsSessions {
+		ip := extractIP(s.RemoteAddr)
+		if geo, ok := geoMap[ip]; ok {
+			hlsSessions[i].Country = geo.Country
+			hlsSessions[i].CountryCode = geo.CountryCode
+		}
+		addCountry(ip)
+	}
+	for i, s := range moqSessions {
+		ip := extractIP(s.RemoteAddr)
+		if geo, ok := geoMap[ip]; ok {
+			moqSessions[i].Country = geo.Country
+			moqSessions[i].CountryCode = geo.CountryCode
+		}
+		if s.State == "read" {
 			addCountry(ip)
 		}
 	}
@@ -740,6 +769,68 @@ func getMediamtxSRTConns(client *http.Client, page, itemsPerPage int) (SRTConnLi
 	for i, conn := range data.Items {
 		data.Items[i].BytesReceivedStr = formatBytes(conn.BytesReceived)
 		data.Items[i].BytesSentStr = formatBytes(conn.BytesSent)
+		data.Items[i].RTTStr = fmt.Sprintf("%.1f ms", conn.MsRTT)
+		data.Items[i].ReceiveRateStr = fmt.Sprintf("%.2f Mbps", conn.MbpsReceiveRate)
+		data.Items[i].SendRateStr = fmt.Sprintf("%.2f Mbps", conn.MbpsSendRate)
+		data.Items[i].LinkCapacityStr = fmt.Sprintf("%.2f Mbps", conn.MbpsLinkCapacity)
+		data.Items[i].LossRateStr = fmt.Sprintf("%.2f%%", conn.PacketsReceivedLossRate)
+	}
+
+	return data, nil
+}
+
+func getMediamtxHLSSessions(client *http.Client, page, itemsPerPage int) (HLSSessionList, error) {
+	data := HLSSessionList{}
+	endpoint := fmt.Sprintf("/v3/hlssessions/list?page=%d&itemsPerPage=%d", page, itemsPerPage)
+	err := mediamtxAPIRequest(client, endpoint, &data)
+	if err != nil {
+		return data, err
+	}
+
+	for i, sess := range data.Items {
+		data.Items[i].BytesSentStr = formatBytes(sess.OutboundBytes)
+	}
+
+	return data, nil
+}
+
+func getMediamtxMoQSessions(client *http.Client, page, itemsPerPage int) (MoQSessionList, error) {
+	data := MoQSessionList{}
+	endpoint := fmt.Sprintf("/v3/moqsessions/list?page=%d&itemsPerPage=%d", page, itemsPerPage)
+	err := mediamtxAPIRequest(client, endpoint, &data)
+	return data, err
+}
+
+// getMediamtxRTSPSSessions fetches the TLS (RTSPS) session list, reusing RTSPSession.
+func getMediamtxRTSPSSessions(client *http.Client, page, itemsPerPage int) (RTSPSessionList, error) {
+	data := RTSPSessionList{}
+	endpoint := fmt.Sprintf("/v3/rtspssessions/list?page=%d&itemsPerPage=%d", page, itemsPerPage)
+	err := mediamtxAPIRequest(client, endpoint, &data)
+	if err != nil {
+		return data, err
+	}
+
+	for i, sess := range data.Items {
+		data.Items[i].BytesReceivedStr = formatBytes(sess.BytesReceived)
+		data.Items[i].BytesSentStr = formatBytes(sess.BytesSent)
+		data.Items[i].RTPPacketsJitterStr = fmt.Sprintf("%.2f ms", sess.RTPPacketsJitter)
+	}
+
+	return data, nil
+}
+
+// getMediamtxRTMPSConns fetches the TLS (RTMPS) connection list, reusing RTMPConn.
+func getMediamtxRTMPSConns(client *http.Client, page, itemsPerPage int) (RTMPConnList, error) {
+	data := RTMPConnList{}
+	endpoint := fmt.Sprintf("/v3/rtmpsconns/list?page=%d&itemsPerPage=%d", page, itemsPerPage)
+	err := mediamtxAPIRequest(client, endpoint, &data)
+	if err != nil {
+		return data, err
+	}
+
+	for i, conn := range data.Items {
+		data.Items[i].BytesReceivedStr = formatBytes(conn.BytesReceived)
+		data.Items[i].BytesSentStr = formatBytes(conn.BytesSent)
 	}
 
 	return data, nil
@@ -769,6 +860,8 @@ func buildStreamSummaries(
 	rtmpConns []RTMPConn,
 	hlsMuxers []HLSMuxer,
 	srtConns []SRTConn,
+	hlsSessions []HLSSession,
+	moqSessions []MoQSession,
 ) []StreamSummary {
 	summaryMap := make(map[string]*StreamSummary)
 	var order []string
@@ -807,10 +900,16 @@ func buildStreamSummaries(
 			s.TotalBytes += conn.BytesReceived + conn.BytesSent
 		}
 	}
+	// HLS muxers contribute cumulative per-path bandwidth (one muxer per path).
 	for _, muxer := range hlsMuxers {
 		if s, ok := summaryMap[muxer.Path]; ok {
-			s.HLSViewers++
 			s.TotalBytes += muxer.BytesSent
+		}
+	}
+	// HLS viewer count comes from per-viewer sessions (v1.18.0+), which are more accurate.
+	for _, sess := range hlsSessions {
+		if s, ok := summaryMap[sess.Path]; ok {
+			s.HLSViewers++
 		}
 	}
 	for _, conn := range srtConns {
@@ -821,11 +920,18 @@ func buildStreamSummaries(
 			s.TotalBytes += conn.BytesReceived + conn.BytesSent
 		}
 	}
+	for _, sess := range moqSessions {
+		if s, ok := summaryMap[sess.Path]; ok {
+			if sess.State == "read" {
+				s.MoQViewers++
+			}
+		}
+	}
 
 	result := make([]StreamSummary, 0, len(order))
 	for _, name := range order {
 		s := summaryMap[name]
-		s.TotalViewers = s.WebRTCViewers + s.RTSPViewers + s.RTMPViewers + s.HLSViewers + s.SRTViewers
+		s.TotalViewers = s.WebRTCViewers + s.RTSPViewers + s.RTMPViewers + s.HLSViewers + s.SRTViewers + s.MoQViewers
 		s.BandwidthStr = formatBytes(s.TotalBytes)
 		result = append(result, *s)
 	}

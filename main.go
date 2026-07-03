@@ -168,8 +168,8 @@ func setupRoutes(router *http.ServeMux, client *http.Client, playbackClient *htt
 			TotalReaders int
 		}
 		viewCounter := viewers{
-			BaseURL:     basePath,
-			PageTitle:   "View Counter",
+			BaseURL:      basePath,
+			PageTitle:    "View Counter",
 			TotalReaders: MediaMTX_Data.TotalReaders,
 		}
 
@@ -405,9 +405,26 @@ func setupRoutes(router *http.ServeMux, client *http.Client, playbackClient *htt
 			log.Errorf("Error getting RTSP sessions: %s", rtspErr)
 		}
 
+		// Merge TLS (RTSPS) sessions into the RTSP list so counts/geo/summaries include them.
+		// A 404 here just means the RTSPS service is disabled on the server, so log at debug.
+		if rtspsSessions, e := getMediamtxRTSPSSessions(client, 0, 100); e != nil {
+			log.Debugf("Skipping RTSPS sessions: %s", e)
+		} else {
+			rtspSessions.Items = append(rtspSessions.Items, rtspsSessions.Items...)
+			rtspSessions.ItemCount += rtspsSessions.ItemCount
+		}
+
 		rtmpConns, rtmpErr := getMediamtxRTMPConns(client, 0, 100)
 		if rtmpErr != nil {
 			log.Errorf("Error getting RTMP connections: %s", rtmpErr)
+		}
+
+		// Merge TLS (RTMPS) connections into the RTMP list (debug-log if the service is disabled).
+		if rtmpsConns, e := getMediamtxRTMPSConns(client, 0, 100); e != nil {
+			log.Debugf("Skipping RTMPS connections: %s", e)
+		} else {
+			rtmpConns.Items = append(rtmpConns.Items, rtmpsConns.Items...)
+			rtmpConns.ItemCount += rtmpsConns.ItemCount
 		}
 
 		hlsMuxers, hlsErr := getMediamtxHLSMuxers(client, 0, 100)
@@ -415,9 +432,20 @@ func setupRoutes(router *http.ServeMux, client *http.Client, playbackClient *htt
 			log.Errorf("Error getting HLS muxers: %s", hlsErr)
 		}
 
+		hlsSessions, hlsSessErr := getMediamtxHLSSessions(client, 0, 100)
+		if hlsSessErr != nil {
+			log.Errorf("Error getting HLS sessions: %s", hlsSessErr)
+		}
+
 		srtConns, srtErr := getMediamtxSRTConns(client, 0, 100)
 		if srtErr != nil {
 			log.Errorf("Error getting SRT connections: %s", srtErr)
+		}
+
+		// MoQ (Media-over-QUIC) may be disabled on the server; a 404 is expected there.
+		moqSessions, moqErr := getMediamtxMoQSessions(client, 0, 100)
+		if moqErr != nil {
+			log.Debugf("Skipping MoQ sessions: %s", moqErr)
 		}
 
 		// Build per-stream summaries
@@ -428,12 +456,14 @@ func setupRoutes(router *http.ServeMux, client *http.Client, playbackClient *htt
 			rtmpConns.Items,
 			hlsMuxers.Items,
 			srtConns.Items,
+			hlsSessions.Items,
+			moqSessions.Items,
 		)
 
 		// GeoIP lookup for viewer countries
-		remoteIPs := collectRemoteIPs(webrtcSessions.Items, rtspSessions.Items, rtmpConns.Items, srtConns.Items)
+		remoteIPs := collectRemoteIPs(webrtcSessions.Items, rtspSessions.Items, rtmpConns.Items, srtConns.Items, hlsSessions.Items, moqSessions.Items)
 		geoMap := lookupGeoIP(client, remoteIPs)
-		countrySummaries := applyGeoData(geoMap, webrtcSessions.Items, rtspSessions.Items, rtmpConns.Items, srtConns.Items)
+		countrySummaries := applyGeoData(geoMap, webrtcSessions.Items, rtspSessions.Items, rtmpConns.Items, srtConns.Items, hlsSessions.Items, moqSessions.Items)
 
 		// Calculate totals
 		var totalViewers int
@@ -454,14 +484,18 @@ func setupRoutes(router *http.ServeMux, client *http.Client, playbackClient *htt
 			RTSPCount:         rtspSessions.ItemCount,
 			RTMPCount:         rtmpConns.ItemCount,
 			HLSCount:          hlsMuxers.ItemCount,
+			HLSSessionCount:   hlsSessions.ItemCount,
 			SRTCount:          srtConns.ItemCount,
+			MoQCount:          moqSessions.ItemCount,
 			StreamSummaries:   summaries,
 			CountrySummaries:  countrySummaries,
 			WebRTCSessions:    webrtcSessions.Items,
 			RTSPSessions:      rtspSessions.Items,
 			RTMPConns:         rtmpConns.Items,
 			HLSMuxers:         hlsMuxers.Items,
+			HLSSessions:       hlsSessions.Items,
 			SRTConns:          srtConns.Items,
+			MoQSessions:       moqSessions.Items,
 		}
 
 		temp := template.Must(template.New("monitoringList").Parse(string(monitoringListHTML)))
