@@ -40,6 +40,8 @@ jobs:
           version: '~> v2'
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+          # Built-in ephemeral token; the job's `contents: write` permission
+          # lets it create releases, and it never expires (unlike a PAT).
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
