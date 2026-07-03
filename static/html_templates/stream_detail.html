@@ -80,6 +80,9 @@
     {{if (ne .StreamHls "")}}
     <a class="btn btn-outline-primary btn-sm" href="{{.StreamHls}}/?muted=false&autoplay=true" target="_blank">HLS Stream</a>
     {{end}}
+    {{if (ne .StreamMoq "")}}
+    <a class="btn btn-outline-primary btn-sm" href="{{.StreamMoq}}/?muted=false&autoplay=true" target="_blank">MoQ Stream</a>
+    {{end}}
     {{if (ne .StreamRtmp "")}}
     <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('{{.StreamRtmp}}')">Copy RTMP URL</button>
     {{end}}

@@ -151,6 +151,9 @@ func formatPathData(path Path) Path {
 	if MEDIAMTX_RTSP_URL != "" {
 		path.StreamRtsp = fmt.Sprintf("%s/%s", MEDIAMTX_RTSP_URL, path.Name)
 	}
+	if MEDIAMTX_MOQ_URL != "" {
+		path.StreamMoq = fmt.Sprintf("%s/%s", MEDIAMTX_MOQ_URL, path.Name)
+	}
 
 	// Add the stream URL
 	if path.Source.Type == "webRTCSession" {

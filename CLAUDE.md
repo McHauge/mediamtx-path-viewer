@@ -93,6 +93,7 @@ Releases are automated via GitHub Actions. Push a git tag to trigger GoReleaser,
 | `MEDIAMTX_PASSWORD` | _(empty)_ | Basic auth password |
 | `MEDIAMTX_RTMP_URL` | _(empty)_ | RTMP stream base URL |
 | `MEDIAMTX_RTSP_URL` | _(empty)_ | RTSP stream base URL |
+| `MEDIAMTX_MOQ_URL` | _(empty)_ | MoQ (Media-over-QUIC) stream base URL — MediaMTX serves a browser player at this address (default port 8892) |
 | `MEDIAMTX_PLAYBACK_URL` | _(empty)_ | MediaMTX playback server base URL (enables recording segment playback) |
 | `APP_PORT` | `8080` | Web server listen port |
 | `APP_PATH` | _(empty)_ | URL base path prefix (e.g., `/monitor`) |
